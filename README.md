@@ -32,7 +32,7 @@ The full first-time walkthrough, step by step, lives in [`START HERE.txt`](START
 
 Your video is **moved** (not copied) into its own project the moment your AI app picks it up. Approve a draft and it lands in `workspace/finished-videos/` — nothing else changes automatically.
 
-<!-- TODO: link a professionally edited video made with QuickCut here. -->
+> 🚧 **TODO:** link a professionally edited video made with QuickCut here.
 
 
 
