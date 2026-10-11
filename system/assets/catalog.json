@@ -1,0 +1,1757 @@
+{
+  "version": 1,
+  "root": "workspace/assets",
+  "paths": "Asset paths are relative to root; install_to is relative to the repo root.",
+  "license_fields": "commercial_videos: may appear in published finished videos; redistributable: raw files may be shared/committed/packaged; tools_templates: may ship inside an editing tool or template; ai_training: may be used to train models (never do this regardless).",
+  "sources": {
+    "original": {
+      "name": "Original assets made for this repo",
+      "license": "Owned by the repo owner",
+      "commercial_videos": true,
+      "redistributable": true,
+      "tools_templates": true,
+      "ai_training": false,
+      "attribution": "none",
+      "acquisition": "repo",
+      "from": "system/assets/originals",
+      "install_to": "workspace/assets/animations/lottie/original"
+    },
+    "gsap": {
+      "name": "GSAP 3.14.2 (animation runtime used by all compositions)",
+      "url": "https://gsap.com",
+      "license": "GSAP Standard License (no-charge)",
+      "license_url": "https://gsap.com/standard-license",
+      "commercial_videos": true,
+      "redistributable": false,
+      "tools_templates": false,
+      "ai_training": false,
+      "attribution": "none",
+      "acquisition": "npm",
+      "package": "gsap",
+      "version": "3.14.2",
+      "files": {
+        "dist/gsap.min.js": "gsap.min.js"
+      },
+      "install_to": "system/assets/vendor"
+    },
+    "lottie-web": {
+      "name": "lottie-web 5.13.0 (Lottie player HyperFrames seeks via window.__hfLottie)",
+      "url": "https://github.com/airbnb/lottie-web",
+      "license": "MIT",
+      "license_url": "https://github.com/airbnb/lottie-web/blob/master/LICENSE.md",
+      "commercial_videos": true,
+      "redistributable": true,
+      "tools_templates": true,
+      "ai_training": false,
+      "attribution": "keep MIT notice",
+      "acquisition": "npm",
+      "package": "lottie-web",
+      "version": "5.13.0",
+      "files": {
+        "build/player/lottie.min.js": "lottie.min.js",
+        "LICENSE.md": "lottie-web-LICENSE.md"
+      },
+      "install_to": "system/assets/vendor"
+    },
+    "phosphor": {
+      "name": "Phosphor Icons 2.1.1 (regular, bold, fill, duotone)",
+      "url": "https://phosphoricons.com",
+      "license": "MIT",
+      "license_url": "https://github.com/phosphor-icons/core/blob/main/LICENSE",
+      "commercial_videos": true,
+      "redistributable": true,
+      "tools_templates": true,
+      "ai_training": false,
+      "attribution": "keep MIT notice",
+      "acquisition": "npm",
+      "package": "@phosphor-icons/core",
+      "version": "2.1.1",
+      "dirs": {
+        "assets/regular": "regular",
+        "assets/bold": "bold",
+        "assets/fill": "fill",
+        "assets/duotone": "duotone"
+      },
+      "files": {
+        "LICENSE": "LICENSE"
+      },
+      "install_to": "workspace/assets/icons/phosphor",
+      "note": "Thin/light weights skipped: hairlines do not read on a phone screen. Any of ~1,500 icons can be used by name: phosphor/<weight>/<name>.svg."
+    },
+    "pixabay": {
+      "name": "Pixabay sound effects bundled with the HyperFrames media-use skill",
+      "url": "https://pixabay.com/sound-effects/",
+      "license": "Pixabay Content License",
+      "license_url": "https://pixabay.com/service/license-summary/",
+      "commercial_videos": true,
+      "redistributable": false,
+      "tools_templates": false,
+      "ai_training": false,
+      "attribution": "none required",
+      "note": "Pixabay forbids distributing files on a standalone basis, so they stay local even though HyperFrames bundles them.",
+      "acquisition": "local-skill",
+      "candidates": [
+        "~/.claude/skills/media-use/audio/assets/sfx",
+        "~/.agents/skills/media-use/audio/assets/sfx"
+      ],
+      "install_to": "workspace/assets/sounds/pixabay"
+    },
+    "mixkit": {
+      "name": "Mixkit free sound effects (curated list)",
+      "url": "https://mixkit.co/free-sound-effects/",
+      "license": "Mixkit Sound Effects Free License",
+      "license_url": "https://mixkit.co/license/#sfxFree",
+      "commercial_videos": true,
+      "redistributable": false,
+      "tools_templates": false,
+      "ai_training": false,
+      "attribution": "none required",
+      "note": "Terms forbid scripts/bots for downloading, so each file is downloaded by hand from the website.",
+      "acquisition": "manual",
+      "match": "^mixkit-.+\\.(wav|mp3)$",
+      "install_to": "workspace/assets/sounds/mixkit",
+      "manual_steps": "Open each category page, find the titles listed by `status`, click Download, then run setup again."
+    },
+    "open-stickers": {
+      "name": "Craftwork Open Stickers (80 illustrations)",
+      "url": "https://openstickers.craftwork.design/",
+      "license": "Craftwork License (free products)",
+      "license_url": "https://craftwork.design/license/",
+      "commercial_videos": true,
+      "redistributable": false,
+      "tools_templates": false,
+      "ai_training": false,
+      "attribution": "appreciated, not required",
+      "note": "No redistribution or sharing of the files; not for templates or products.",
+      "acquisition": "manual",
+      "match": "(open.?stickers|craftwork).*\\.zip$",
+      "keep": [
+        "svg"
+      ],
+      "install_to": "workspace/assets/illustrations/open-stickers",
+      "manual_steps": "Get the free pack from https://craftwork.gumroad.com/l/gxaylb (enter 0), save the zip to Downloads, run setup again."
+    },
+    "lottiefiles": {
+      "name": "LottieFiles free animations (hand-picked)",
+      "url": "https://lottiefiles.com/free-animations",
+      "license": "Lottie Simple License",
+      "license_url": "https://lottiefiles.com/page/license",
+      "commercial_videos": true,
+      "redistributable": true,
+      "tools_templates": false,
+      "ai_training": false,
+      "attribution": "optional, encouraged",
+      "note": "The license allows redistribution, but compiling LottieFiles files into a similar service is forbidden and their site terms ban bots. Treat as local-only; record creator and URL per file.",
+      "acquisition": "manual",
+      "install_to": "workspace/assets/animations/lottie/lottiefiles",
+      "manual_steps": "Download the Lottie JSON from the animation page while signed in, then ask your AI app to import it with its page URL and creator."
+    },
+    "editorial-sounds": {
+      "name": "Editorial Motion Toolkit sound cues (original)",
+      "license": "Original files made for the Editorial Motion Toolkit; included for local and commercial video use",
+      "commercial_videos": true,
+      "redistributable": true,
+      "tools_templates": true,
+      "ai_training": false,
+      "attribution": "none",
+      "acquisition": "repo",
+      "note": "Opt-in only: never automatic, owner approval per video. Cue notes in system/assets/editorial/sounds/sound-cues.json.",
+      "from": "system/assets/editorial/sounds",
+      "formats": [
+        "wav"
+      ],
+      "install_to": "workspace/assets/sounds/editorial"
+    },
+    "editorial-overlays": {
+      "name": "Editorial Motion Toolkit annotation overlays (original)",
+      "license": "Original files made for the Editorial Motion Toolkit; included for local and commercial video use",
+      "commercial_videos": true,
+      "redistributable": true,
+      "tools_templates": true,
+      "ai_training": false,
+      "attribution": "none",
+      "acquisition": "repo",
+      "from": "system/assets/editorial/overlays",
+      "formats": [
+        "svg"
+      ],
+      "install_to": "workspace/assets/illustrations/editorial"
+    }
+  },
+  "manual_shopping_list": {
+    "mixkit": [
+      {
+        "title": "Air woosh",
+        "category": "whoosh",
+        "page": "https://mixkit.co/free-sound-effects/whoosh/"
+      },
+      {
+        "title": "Fast whoosh transition",
+        "category": "whoosh",
+        "page": "https://mixkit.co/free-sound-effects/whoosh/"
+      },
+      {
+        "title": "Arrow whoosh",
+        "category": "whoosh",
+        "page": "https://mixkit.co/free-sound-effects/whoosh/"
+      },
+      {
+        "title": "Cinematic whoosh fast transition",
+        "category": "whoosh",
+        "page": "https://mixkit.co/free-sound-effects/whoosh/"
+      },
+      {
+        "title": "Long pop",
+        "category": "pop",
+        "page": "https://mixkit.co/free-sound-effects/pop/"
+      },
+      {
+        "title": "Message pop alert",
+        "category": "pop",
+        "page": "https://mixkit.co/free-sound-effects/pop/"
+      },
+      {
+        "title": "Dry pop up notification alert",
+        "category": "pop",
+        "page": "https://mixkit.co/free-sound-effects/pop/"
+      },
+      {
+        "title": "Explainer video pops whoosh light pop",
+        "category": "pop",
+        "page": "https://mixkit.co/free-sound-effects/pop/"
+      },
+      {
+        "title": "Correct answer tone",
+        "category": "success",
+        "page": "https://mixkit.co/free-sound-effects/notification/"
+      },
+      {
+        "title": "Positive notification",
+        "category": "success",
+        "page": "https://mixkit.co/free-sound-effects/notification/"
+      },
+      {
+        "title": "Confirmation tone",
+        "category": "success",
+        "page": "https://mixkit.co/free-sound-effects/notification/"
+      },
+      {
+        "title": "Interface hint notification",
+        "category": "notification",
+        "page": "https://mixkit.co/free-sound-effects/notification/"
+      },
+      {
+        "title": "Software interface start",
+        "category": "digital",
+        "page": "https://mixkit.co/free-sound-effects/notification/"
+      },
+      {
+        "title": "Select click",
+        "category": "click",
+        "page": "https://mixkit.co/free-sound-effects/click/"
+      },
+      {
+        "title": "Modern click box check",
+        "category": "click",
+        "page": "https://mixkit.co/free-sound-effects/click/"
+      },
+      {
+        "title": "Clear mouse clicks",
+        "category": "click",
+        "page": "https://mixkit.co/free-sound-effects/click/"
+      },
+      {
+        "title": "Mouse click close",
+        "category": "click",
+        "page": "https://mixkit.co/free-sound-effects/click/"
+      },
+      {
+        "title": "Typing on a laptop keyboard",
+        "category": "typing",
+        "page": "https://mixkit.co/free-sound-effects/click/"
+      }
+    ],
+    "lottiefiles": [
+      "success / checkmark",
+      "lightbulb / idea",
+      "notification bell",
+      "arrow / pointer",
+      "loading / progress",
+      "sparkles / celebration",
+      "typing indicator / chat",
+      "thumbs up / reaction",
+      "warning / attention",
+      "workflow / gears"
+    ]
+  },
+  "assets": [
+    {
+      "id": "original-success-check",
+      "name": "Success check (draws on)",
+      "category": "animation",
+      "format": "lottie",
+      "source": "original",
+      "path": "animations/lottie/original/success-check.json",
+      "duration_seconds": 1.2,
+      "loop": false,
+      "tags": [
+        "success",
+        "check",
+        "checkmark",
+        "done",
+        "complete",
+        "confirmation",
+        "correct"
+      ],
+      "description": "Circle grows, then a checkmark strokes on. Neutral green-on-transparent, 512x512.",
+      "recommended_usage": [
+        "task completion",
+        "a correct answer",
+        "confirming a claim"
+      ]
+    },
+    {
+      "id": "sfx-pop",
+      "name": "Quick pop",
+      "category": "sound",
+      "format": "mp3",
+      "source": "pixabay",
+      "path": "sounds/pixabay/pop.mp3",
+      "duration_seconds": 0.72,
+      "tags": [
+        "pop",
+        "appear",
+        "sticker",
+        "badge",
+        "chip",
+        "reaction"
+      ],
+      "description": "Quick pop for an element appearing.",
+      "recommended_usage": [
+        "icon or sticker pops in",
+        "tag/badge appears"
+      ]
+    },
+    {
+      "id": "sfx-click",
+      "name": "Crisp UI click",
+      "category": "sound",
+      "format": "mp3",
+      "source": "pixabay",
+      "path": "sounds/pixabay/click.mp3",
+      "duration_seconds": 0.37,
+      "tags": [
+        "click",
+        "button",
+        "select",
+        "toggle",
+        "ui"
+      ],
+      "description": "Crisp click for a button press or selection.",
+      "recommended_usage": [
+        "cursor click",
+        "option selected"
+      ]
+    },
+    {
+      "id": "sfx-click-soft",
+      "name": "Soft click",
+      "category": "sound",
+      "format": "mp3",
+      "source": "pixabay",
+      "path": "sounds/pixabay/click-soft.mp3",
+      "duration_seconds": 0.37,
+      "tags": [
+        "click",
+        "soft",
+        "tap",
+        "ui",
+        "subtle"
+      ],
+      "description": "Quiet click for a low-key tap.",
+      "recommended_usage": [
+        "subtle selection",
+        "quiet UI tap"
+      ]
+    },
+    {
+      "id": "sfx-key-press",
+      "name": "Single key press",
+      "category": "sound",
+      "format": "mp3",
+      "source": "pixabay",
+      "path": "sounds/pixabay/key-press.mp3",
+      "duration_seconds": 0.4,
+      "tags": [
+        "keyboard",
+        "key",
+        "typing",
+        "terminal",
+        "code"
+      ],
+      "description": "One keystroke.",
+      "recommended_usage": [
+        "single typed character",
+        "terminal input"
+      ]
+    },
+    {
+      "id": "sfx-typing",
+      "name": "Typing burst",
+      "category": "sound",
+      "format": "mp3",
+      "source": "pixabay",
+      "path": "sounds/pixabay/typing.mp3",
+      "duration_seconds": 1.5,
+      "tags": [
+        "typing",
+        "keyboard",
+        "code",
+        "writing",
+        "computer"
+      ],
+      "description": "About 1.5 s of keyboard typing.",
+      "recommended_usage": [
+        "text or code typing on screen"
+      ]
+    },
+    {
+      "id": "sfx-whoosh",
+      "name": "Short whoosh",
+      "category": "sound",
+      "format": "mp3",
+      "source": "pixabay",
+      "path": "sounds/pixabay/whoosh.mp3",
+      "duration_seconds": 0.57,
+      "tags": [
+        "whoosh",
+        "swoosh",
+        "transition",
+        "slide",
+        "motion",
+        "swipe"
+      ],
+      "description": "Short whoosh for a slide or transition.",
+      "recommended_usage": [
+        "element slides in",
+        "quick scene change"
+      ]
+    },
+    {
+      "id": "sfx-whoosh-short",
+      "name": "Short whoosh (alt)",
+      "category": "sound",
+      "format": "mp3",
+      "source": "pixabay",
+      "path": "sounds/pixabay/whoosh-short.mp3",
+      "duration_seconds": 0.57,
+      "tags": [
+        "whoosh",
+        "swoosh",
+        "transition",
+        "slide",
+        "motion"
+      ],
+      "description": "Alternative short whoosh.",
+      "recommended_usage": [
+        "element slides in"
+      ]
+    },
+    {
+      "id": "sfx-whoosh-cinematic",
+      "name": "Cinematic whoosh",
+      "category": "sound",
+      "format": "mp3",
+      "source": "pixabay",
+      "path": "sounds/pixabay/whoosh-cinematic.mp3",
+      "duration_seconds": 5.54,
+      "tags": [
+        "whoosh",
+        "cinematic",
+        "transition",
+        "dramatic",
+        "long"
+      ],
+      "description": "Long, dramatic whoosh.",
+      "recommended_usage": [
+        "big reveal transition (use sparingly)"
+      ]
+    },
+    {
+      "id": "sfx-chime",
+      "name": "Soft chime",
+      "category": "sound",
+      "format": "mp3",
+      "source": "pixabay",
+      "path": "sounds/pixabay/chime.mp3",
+      "duration_seconds": 2.5,
+      "tags": [
+        "success",
+        "chime",
+        "positive",
+        "confirmation",
+        "done"
+      ],
+      "description": "Gentle melodic chime.",
+      "recommended_usage": [
+        "success moment",
+        "light positive beat"
+      ]
+    },
+    {
+      "id": "sfx-notification",
+      "name": "Notification chime",
+      "category": "sound",
+      "format": "mp3",
+      "source": "pixabay",
+      "path": "sounds/pixabay/notification.mp3",
+      "duration_seconds": 2.46,
+      "tags": [
+        "notification",
+        "alert",
+        "message",
+        "toast",
+        "bell"
+      ],
+      "description": "Notification tone for a message or toast appearing.",
+      "recommended_usage": [
+        "notification card appears",
+        "message arrives"
+      ]
+    },
+    {
+      "id": "sfx-ping",
+      "name": "Electronic ping",
+      "category": "sound",
+      "format": "mp3",
+      "source": "pixabay",
+      "path": "sounds/pixabay/ping.mp3",
+      "duration_seconds": 1.32,
+      "tags": [
+        "ping",
+        "digital",
+        "highlight",
+        "data",
+        "reveal"
+      ],
+      "description": "Sharp electronic ping.",
+      "recommended_usage": [
+        "key number or data point reveal"
+      ]
+    },
+    {
+      "id": "sfx-sparkle",
+      "name": "Sparkle",
+      "category": "sound",
+      "format": "mp3",
+      "source": "pixabay",
+      "path": "sounds/pixabay/sparkle.mp3",
+      "duration_seconds": 1.8,
+      "tags": [
+        "sparkle",
+        "shine",
+        "magic",
+        "celebration",
+        "highlight"
+      ],
+      "description": "Bright shimmer.",
+      "recommended_usage": [
+        "highlight on a hero element (rarely)"
+      ]
+    },
+    {
+      "id": "sfx-error",
+      "name": "Error tone",
+      "category": "sound",
+      "format": "mp3",
+      "source": "pixabay",
+      "path": "sounds/pixabay/error.mp3",
+      "duration_seconds": 1.62,
+      "tags": [
+        "error",
+        "wrong",
+        "fail",
+        "warning",
+        "negative"
+      ],
+      "description": "Negative tone for a failure or wrong answer.",
+      "recommended_usage": [
+        "something fails",
+        "a wrong claim"
+      ]
+    },
+    {
+      "id": "sfx-glitch-subtle",
+      "name": "Subtle glitch",
+      "category": "sound",
+      "format": "mp3",
+      "source": "pixabay",
+      "path": "sounds/pixabay/glitch-3.mp3",
+      "duration_seconds": 3.1,
+      "tags": [
+        "glitch",
+        "digital",
+        "tech",
+        "subtle",
+        "transition"
+      ],
+      "description": "Low-key digital texture.",
+      "recommended_usage": [
+        "subtle tech transition"
+      ]
+    },
+    {
+      "id": "sfx-glitch-punchy",
+      "name": "Punchy glitch",
+      "category": "sound",
+      "format": "mp3",
+      "source": "pixabay",
+      "path": "sounds/pixabay/glitch-1.mp3",
+      "duration_seconds": 2.64,
+      "tags": [
+        "glitch",
+        "digital",
+        "hard cut",
+        "reveal"
+      ],
+      "description": "Punchy digital glitch.",
+      "recommended_usage": [
+        "hard-cut accent"
+      ]
+    },
+    {
+      "id": "sfx-glitch-harsh",
+      "name": "Harsh glitch",
+      "category": "sound",
+      "format": "mp3",
+      "source": "pixabay",
+      "path": "sounds/pixabay/glitch-2.mp3",
+      "duration_seconds": 3.5,
+      "tags": [
+        "glitch",
+        "chaos",
+        "distorted",
+        "jarring"
+      ],
+      "description": "Harsh, long glitch.",
+      "recommended_usage": [
+        "chaotic moment (rarely fits a calm style)"
+      ]
+    },
+    {
+      "id": "sfx-impact",
+      "name": "Bass impact",
+      "category": "sound",
+      "format": "mp3",
+      "source": "pixabay",
+      "path": "sounds/pixabay/impact-bass-1.mp3",
+      "duration_seconds": 2.12,
+      "tags": [
+        "impact",
+        "hit",
+        "bass",
+        "slam",
+        "title"
+      ],
+      "description": "Deep hit for a headline landing.",
+      "recommended_usage": [
+        "title slam (sparingly)"
+      ]
+    },
+    {
+      "id": "sfx-impact-swell",
+      "name": "Bass impact with swell",
+      "category": "sound",
+      "format": "mp3",
+      "source": "pixabay",
+      "path": "sounds/pixabay/impact-bass-2.mp3",
+      "duration_seconds": 2.59,
+      "tags": [
+        "impact",
+        "hit",
+        "bass",
+        "anticipation",
+        "reveal"
+      ],
+      "description": "Short build into a deep hit.",
+      "recommended_usage": [
+        "reveal with a small build-up"
+      ]
+    },
+    {
+      "id": "sfx-riser",
+      "name": "Cinematic riser",
+      "category": "sound",
+      "format": "mp3",
+      "source": "pixabay",
+      "path": "sounds/pixabay/riser.mp3",
+      "duration_seconds": 10.03,
+      "tags": [
+        "riser",
+        "build",
+        "tension",
+        "cinematic"
+      ],
+      "description": "10 s build peaking at the end; start it 10.03 s before the reveal.",
+      "recommended_usage": [
+        "building to a climax"
+      ]
+    },
+    {
+      "id": "icon-lightbulb",
+      "name": "Lightbulb",
+      "category": "icon",
+      "format": "svg",
+      "source": "phosphor",
+      "path": "icons/phosphor/regular/lightbulb.svg",
+      "variants": [
+        "bold",
+        "fill",
+        "duotone"
+      ],
+      "tags": [
+        "idea",
+        "insight",
+        "tip",
+        "lightbulb",
+        "think"
+      ],
+      "description": "Phosphor lightbulb icon; draws in currentColor.",
+      "recommended_usage": [
+        "a new idea",
+        "a tip"
+      ]
+    },
+    {
+      "id": "icon-check-circle",
+      "name": "Check in circle",
+      "category": "icon",
+      "format": "svg",
+      "source": "phosphor",
+      "path": "icons/phosphor/regular/check-circle.svg",
+      "variants": [
+        "bold",
+        "fill",
+        "duotone"
+      ],
+      "tags": [
+        "success",
+        "check",
+        "done",
+        "correct",
+        "yes"
+      ],
+      "description": "Phosphor check in circle icon; draws in currentColor.",
+      "recommended_usage": [
+        "something works",
+        "a correct claim"
+      ]
+    },
+    {
+      "id": "icon-x-circle",
+      "name": "X in circle",
+      "category": "icon",
+      "format": "svg",
+      "source": "phosphor",
+      "path": "icons/phosphor/regular/x-circle.svg",
+      "variants": [
+        "bold",
+        "fill",
+        "duotone"
+      ],
+      "tags": [
+        "wrong",
+        "no",
+        "fail",
+        "error",
+        "incorrect"
+      ],
+      "description": "Phosphor x in circle icon; draws in currentColor.",
+      "recommended_usage": [
+        "a wrong approach",
+        "a myth"
+      ]
+    },
+    {
+      "id": "icon-warning",
+      "name": "Warning triangle",
+      "category": "icon",
+      "format": "svg",
+      "source": "phosphor",
+      "path": "icons/phosphor/regular/warning.svg",
+      "variants": [
+        "bold",
+        "fill",
+        "duotone"
+      ],
+      "tags": [
+        "warning",
+        "attention",
+        "caution",
+        "risk",
+        "alert"
+      ],
+      "description": "Phosphor warning triangle icon; draws in currentColor.",
+      "recommended_usage": [
+        "a caveat",
+        "a risk"
+      ]
+    },
+    {
+      "id": "icon-code",
+      "name": "Code brackets",
+      "category": "icon",
+      "format": "svg",
+      "source": "phosphor",
+      "path": "icons/phosphor/regular/code.svg",
+      "variants": [
+        "bold",
+        "fill",
+        "duotone"
+      ],
+      "tags": [
+        "code",
+        "programming",
+        "developer",
+        "software"
+      ],
+      "description": "Phosphor code brackets icon; draws in currentColor.",
+      "recommended_usage": [
+        "talking about code"
+      ]
+    },
+    {
+      "id": "icon-terminal-window",
+      "name": "Terminal window",
+      "category": "icon",
+      "format": "svg",
+      "source": "phosphor",
+      "path": "icons/phosphor/regular/terminal-window.svg",
+      "variants": [
+        "bold",
+        "fill",
+        "duotone"
+      ],
+      "tags": [
+        "terminal",
+        "cli",
+        "command",
+        "shell",
+        "developer"
+      ],
+      "description": "Phosphor terminal window icon; draws in currentColor.",
+      "recommended_usage": [
+        "running a command"
+      ]
+    },
+    {
+      "id": "icon-robot",
+      "name": "Robot",
+      "category": "icon",
+      "format": "svg",
+      "source": "phosphor",
+      "path": "icons/phosphor/regular/robot.svg",
+      "variants": [
+        "bold",
+        "fill",
+        "duotone"
+      ],
+      "tags": [
+        "ai",
+        "agent",
+        "bot",
+        "automation",
+        "llm"
+      ],
+      "description": "Phosphor robot icon; draws in currentColor.",
+      "recommended_usage": [
+        "an AI agent"
+      ]
+    },
+    {
+      "id": "icon-brain",
+      "name": "Brain",
+      "category": "icon",
+      "format": "svg",
+      "source": "phosphor",
+      "path": "icons/phosphor/regular/brain.svg",
+      "variants": [
+        "bold",
+        "fill",
+        "duotone"
+      ],
+      "tags": [
+        "thinking",
+        "think",
+        "mind",
+        "reasoning",
+        "learn"
+      ],
+      "description": "Phosphor brain icon; draws in currentColor.",
+      "recommended_usage": [
+        "thinking for yourself"
+      ]
+    },
+    {
+      "id": "icon-coins",
+      "name": "Coins",
+      "category": "icon",
+      "format": "svg",
+      "source": "phosphor",
+      "path": "icons/phosphor/regular/coins.svg",
+      "variants": [
+        "bold",
+        "fill",
+        "duotone"
+      ],
+      "tags": [
+        "money",
+        "cost",
+        "price",
+        "tokens",
+        "save"
+      ],
+      "description": "Phosphor coins icon; draws in currentColor.",
+      "recommended_usage": [
+        "cost or token spend"
+      ]
+    },
+    {
+      "id": "icon-currency-dollar",
+      "name": "Dollar sign",
+      "category": "icon",
+      "format": "svg",
+      "source": "phosphor",
+      "path": "icons/phosphor/regular/currency-dollar.svg",
+      "variants": [
+        "bold",
+        "fill",
+        "duotone"
+      ],
+      "tags": [
+        "money",
+        "cost",
+        "price",
+        "dollar",
+        "pay"
+      ],
+      "description": "Phosphor dollar sign icon; draws in currentColor.",
+      "recommended_usage": [
+        "price or money"
+      ]
+    },
+    {
+      "id": "icon-lightning",
+      "name": "Lightning bolt",
+      "category": "icon",
+      "format": "svg",
+      "source": "phosphor",
+      "path": "icons/phosphor/regular/lightning.svg",
+      "variants": [
+        "bold",
+        "fill",
+        "duotone"
+      ],
+      "tags": [
+        "fast",
+        "speed",
+        "power",
+        "efficient",
+        "quick"
+      ],
+      "description": "Phosphor lightning bolt icon; draws in currentColor.",
+      "recommended_usage": [
+        "speed or efficiency"
+      ]
+    },
+    {
+      "id": "icon-rocket-launch",
+      "name": "Rocket",
+      "category": "icon",
+      "format": "svg",
+      "source": "phosphor",
+      "path": "icons/phosphor/regular/rocket-launch.svg",
+      "variants": [
+        "bold",
+        "fill",
+        "duotone"
+      ],
+      "tags": [
+        "launch",
+        "ship",
+        "growth",
+        "start",
+        "fast"
+      ],
+      "description": "Phosphor rocket icon; draws in currentColor.",
+      "recommended_usage": [
+        "shipping something"
+      ]
+    },
+    {
+      "id": "icon-chat-circle-dots",
+      "name": "Chat bubble",
+      "category": "icon",
+      "format": "svg",
+      "source": "phosphor",
+      "path": "icons/phosphor/regular/chat-circle-dots.svg",
+      "variants": [
+        "bold",
+        "fill",
+        "duotone"
+      ],
+      "tags": [
+        "chat",
+        "message",
+        "prompt",
+        "conversation",
+        "typing"
+      ],
+      "description": "Phosphor chat bubble icon; draws in currentColor.",
+      "recommended_usage": [
+        "a chat or prompt"
+      ]
+    },
+    {
+      "id": "icon-bell",
+      "name": "Bell",
+      "category": "icon",
+      "format": "svg",
+      "source": "phosphor",
+      "path": "icons/phosphor/regular/bell.svg",
+      "variants": [
+        "bold",
+        "fill",
+        "duotone"
+      ],
+      "tags": [
+        "notification",
+        "alert",
+        "reminder"
+      ],
+      "description": "Phosphor bell icon; draws in currentColor.",
+      "recommended_usage": [
+        "a notification"
+      ]
+    },
+    {
+      "id": "icon-cursor-click",
+      "name": "Cursor click",
+      "category": "icon",
+      "format": "svg",
+      "source": "phosphor",
+      "path": "icons/phosphor/regular/cursor-click.svg",
+      "variants": [
+        "bold",
+        "fill",
+        "duotone"
+      ],
+      "tags": [
+        "click",
+        "select",
+        "ui",
+        "button"
+      ],
+      "description": "Phosphor cursor click icon; draws in currentColor.",
+      "recommended_usage": [
+        "clicking something"
+      ]
+    },
+    {
+      "id": "icon-arrow-right",
+      "name": "Arrow right",
+      "category": "icon",
+      "format": "svg",
+      "source": "phosphor",
+      "path": "icons/phosphor/regular/arrow-right.svg",
+      "variants": [
+        "bold",
+        "fill",
+        "duotone"
+      ],
+      "tags": [
+        "arrow",
+        "next",
+        "pointer",
+        "direction"
+      ],
+      "description": "Phosphor arrow right icon; draws in currentColor.",
+      "recommended_usage": [
+        "pointing to the next thing"
+      ]
+    },
+    {
+      "id": "icon-hand-pointing",
+      "name": "Pointing hand",
+      "category": "icon",
+      "format": "svg",
+      "source": "phosphor",
+      "path": "icons/phosphor/regular/hand-pointing.svg",
+      "variants": [
+        "bold",
+        "fill",
+        "duotone"
+      ],
+      "tags": [
+        "pointer",
+        "point",
+        "attention",
+        "look"
+      ],
+      "description": "Phosphor pointing hand icon; draws in currentColor.",
+      "recommended_usage": [
+        "drawing attention"
+      ]
+    },
+    {
+      "id": "icon-magnifying-glass",
+      "name": "Magnifying glass",
+      "category": "icon",
+      "format": "svg",
+      "source": "phosphor",
+      "path": "icons/phosphor/regular/magnifying-glass.svg",
+      "variants": [
+        "bold",
+        "fill",
+        "duotone"
+      ],
+      "tags": [
+        "search",
+        "find",
+        "inspect",
+        "look",
+        "read"
+      ],
+      "description": "Phosphor magnifying glass icon; draws in currentColor.",
+      "recommended_usage": [
+        "reading or inspecting"
+      ]
+    },
+    {
+      "id": "icon-gear",
+      "name": "Gear",
+      "category": "icon",
+      "format": "svg",
+      "source": "phosphor",
+      "path": "icons/phosphor/regular/gear.svg",
+      "variants": [
+        "bold",
+        "fill",
+        "duotone"
+      ],
+      "tags": [
+        "settings",
+        "workflow",
+        "process",
+        "config"
+      ],
+      "description": "Phosphor gear icon; draws in currentColor.",
+      "recommended_usage": [
+        "a process or setting"
+      ]
+    },
+    {
+      "id": "icon-timer",
+      "name": "Timer",
+      "category": "icon",
+      "format": "svg",
+      "source": "phosphor",
+      "path": "icons/phosphor/regular/timer.svg",
+      "variants": [
+        "bold",
+        "fill",
+        "duotone"
+      ],
+      "tags": [
+        "time",
+        "speed",
+        "duration",
+        "stopwatch"
+      ],
+      "description": "Phosphor timer icon; draws in currentColor.",
+      "recommended_usage": [
+        "time saved"
+      ]
+    },
+    {
+      "id": "icon-hourglass",
+      "name": "Hourglass",
+      "category": "icon",
+      "format": "svg",
+      "source": "phosphor",
+      "path": "icons/phosphor/regular/hourglass.svg",
+      "variants": [
+        "bold",
+        "fill",
+        "duotone"
+      ],
+      "tags": [
+        "wait",
+        "time",
+        "slow",
+        "loading"
+      ],
+      "description": "Phosphor hourglass icon; draws in currentColor.",
+      "recommended_usage": [
+        "waiting"
+      ]
+    },
+    {
+      "id": "icon-chart-line-up",
+      "name": "Chart going up",
+      "category": "icon",
+      "format": "svg",
+      "source": "phosphor",
+      "path": "icons/phosphor/regular/chart-line-up.svg",
+      "variants": [
+        "bold",
+        "fill",
+        "duotone"
+      ],
+      "tags": [
+        "growth",
+        "increase",
+        "trend",
+        "up",
+        "results"
+      ],
+      "description": "Phosphor chart going up icon; draws in currentColor.",
+      "recommended_usage": [
+        "improvement"
+      ]
+    },
+    {
+      "id": "icon-trend-down",
+      "name": "Trend down",
+      "category": "icon",
+      "format": "svg",
+      "source": "phosphor",
+      "path": "icons/phosphor/regular/trend-down.svg",
+      "variants": [
+        "bold",
+        "fill",
+        "duotone"
+      ],
+      "tags": [
+        "decrease",
+        "down",
+        "less",
+        "reduce",
+        "drop"
+      ],
+      "description": "Phosphor trend down icon; draws in currentColor.",
+      "recommended_usage": [
+        "reducing cost or tokens"
+      ]
+    },
+    {
+      "id": "icon-files",
+      "name": "Files",
+      "category": "icon",
+      "format": "svg",
+      "source": "phosphor",
+      "path": "icons/phosphor/regular/files.svg",
+      "variants": [
+        "bold",
+        "fill",
+        "duotone"
+      ],
+      "tags": [
+        "files",
+        "documents",
+        "context",
+        "folder"
+      ],
+      "description": "Phosphor files icon; draws in currentColor.",
+      "recommended_usage": [
+        "files or context"
+      ]
+    },
+    {
+      "id": "icon-git-branch",
+      "name": "Git branch",
+      "category": "icon",
+      "format": "svg",
+      "source": "phosphor",
+      "path": "icons/phosphor/regular/git-branch.svg",
+      "variants": [
+        "bold",
+        "fill",
+        "duotone"
+      ],
+      "tags": [
+        "git",
+        "branch",
+        "code",
+        "version"
+      ],
+      "description": "Phosphor git branch icon; draws in currentColor.",
+      "recommended_usage": [
+        "version control"
+      ]
+    },
+    {
+      "id": "icon-cpu",
+      "name": "CPU chip",
+      "category": "icon",
+      "format": "svg",
+      "source": "phosphor",
+      "path": "icons/phosphor/regular/cpu.svg",
+      "variants": [
+        "bold",
+        "fill",
+        "duotone"
+      ],
+      "tags": [
+        "compute",
+        "chip",
+        "hardware",
+        "model"
+      ],
+      "description": "Phosphor cpu chip icon; draws in currentColor.",
+      "recommended_usage": [
+        "compute"
+      ]
+    },
+    {
+      "id": "icon-database",
+      "name": "Database",
+      "category": "icon",
+      "format": "svg",
+      "source": "phosphor",
+      "path": "icons/phosphor/regular/database.svg",
+      "variants": [
+        "bold",
+        "fill",
+        "duotone"
+      ],
+      "tags": [
+        "data",
+        "storage",
+        "database"
+      ],
+      "description": "Phosphor database icon; draws in currentColor.",
+      "recommended_usage": [
+        "data"
+      ]
+    },
+    {
+      "id": "icon-book-open-text",
+      "name": "Open book",
+      "category": "icon",
+      "format": "svg",
+      "source": "phosphor",
+      "path": "icons/phosphor/regular/book-open-text.svg",
+      "variants": [
+        "bold",
+        "fill",
+        "duotone"
+      ],
+      "tags": [
+        "read",
+        "docs",
+        "documentation",
+        "learn"
+      ],
+      "description": "Phosphor open book icon; draws in currentColor.",
+      "recommended_usage": [
+        "reading the docs"
+      ]
+    },
+    {
+      "id": "icon-question",
+      "name": "Question mark",
+      "category": "icon",
+      "format": "svg",
+      "source": "phosphor",
+      "path": "icons/phosphor/regular/question.svg",
+      "variants": [
+        "bold",
+        "fill",
+        "duotone"
+      ],
+      "tags": [
+        "question",
+        "why",
+        "unknown",
+        "ask"
+      ],
+      "description": "Phosphor question mark icon; draws in currentColor.",
+      "recommended_usage": [
+        "a question"
+      ]
+    },
+    {
+      "id": "icon-thumbs-up",
+      "name": "Thumbs up",
+      "category": "icon",
+      "format": "svg",
+      "source": "phosphor",
+      "path": "icons/phosphor/regular/thumbs-up.svg",
+      "variants": [
+        "bold",
+        "fill",
+        "duotone"
+      ],
+      "tags": [
+        "like",
+        "approve",
+        "good",
+        "reaction"
+      ],
+      "description": "Phosphor thumbs up icon; draws in currentColor.",
+      "recommended_usage": [
+        "approval"
+      ]
+    },
+    {
+      "id": "sfx-editorial-airy-swish",
+      "name": "Airy swish (editorial)",
+      "category": "sound",
+      "format": "wav",
+      "source": "editorial-sounds",
+      "path": "sounds/editorial/airy-swish.wav",
+      "duration_seconds": 0.43,
+      "volume": 0.178,
+      "tags": [
+        "swish",
+        "whoosh",
+        "slide",
+        "transition",
+        "screenshot",
+        "entrance",
+        "editorial",
+        "subtle"
+      ],
+      "description": "Gentle, quiet swish for a real screenshot entering or a meaningful scene slide. Often better omitted.",
+      "recommended_usage": [
+        "floating proof entrance",
+        "match expand midpoint",
+        "justified wipe"
+      ],
+      "requires_approval": true
+    },
+    {
+      "id": "sfx-editorial-tactile-click",
+      "name": "Tactile click (editorial)",
+      "category": "sound",
+      "format": "wav",
+      "source": "editorial-sounds",
+      "path": "sounds/editorial/tactile-click.wav",
+      "duration_seconds": 0.145,
+      "volume": 0.126,
+      "tags": [
+        "click",
+        "tap",
+        "button",
+        "ui",
+        "interface",
+        "cursor",
+        "editorial",
+        "subtle"
+      ],
+      "description": "Quiet UI click, synced to an actual recorded click, never to captions.",
+      "recommended_usage": [
+        "real on-screen click",
+        "focus on a named control"
+      ],
+      "requires_approval": true
+    },
+    {
+      "id": "sfx-editorial-soft-land",
+      "name": "Soft land (editorial)",
+      "category": "sound",
+      "format": "wav",
+      "source": "editorial-sounds",
+      "path": "sounds/editorial/soft-land.wav",
+      "duration_seconds": 0.28,
+      "volume": 0.126,
+      "tags": [
+        "land",
+        "landing",
+        "settle",
+        "card",
+        "screenshot",
+        "pop",
+        "editorial",
+        "subtle"
+      ],
+      "description": "Quiet settle when a screenshot or card lands, only if it adds impact.",
+      "recommended_usage": [
+        "image landing",
+        "card settles"
+      ],
+      "requires_approval": true
+    },
+    {
+      "id": "editorial-arrow",
+      "name": "Arrow annotation (editorial)",
+      "category": "illustration",
+      "format": "svg",
+      "source": "editorial-overlays",
+      "path": "illustrations/editorial/arrow-annotation.svg",
+      "tags": [
+        "arrow",
+        "annotation",
+        "point",
+        "pointer",
+        "callout",
+        "locate",
+        "editorial"
+      ],
+      "description": "Hand-drawn-feel curved arrow, pale blue stroke on transparent. Draw it on with HFEditorial.drawLine.",
+      "recommended_usage": [
+        "locate something hard to find in real UI"
+      ]
+    },
+    {
+      "id": "editorial-connector",
+      "name": "Dotted connector (editorial)",
+      "category": "illustration",
+      "format": "svg",
+      "source": "editorial-overlays",
+      "path": "illustrations/editorial/connector.svg",
+      "tags": [
+        "connector",
+        "line",
+        "link",
+        "dotted",
+        "annotation",
+        "editorial"
+      ],
+      "description": "Dotted elbow connector linking a label to a point.",
+      "recommended_usage": [
+        "link a label to a detail"
+      ]
+    },
+    {
+      "id": "editorial-focus-outline",
+      "name": "Focus outline (editorial)",
+      "category": "illustration",
+      "format": "svg",
+      "source": "editorial-overlays",
+      "path": "illustrations/editorial/focus-outline.svg",
+      "tags": [
+        "focus",
+        "outline",
+        "highlight",
+        "button",
+        "ui",
+        "frame",
+        "editorial"
+      ],
+      "description": "Rounded non-glowing outline for a focused UI control (pairs with HFEditorial.focusIn).",
+      "recommended_usage": [
+        "named UI control",
+        "click target"
+      ]
+    },
+    {
+      "id": "editorial-underline",
+      "name": "Underline stroke (editorial)",
+      "category": "illustration",
+      "format": "svg",
+      "source": "editorial-overlays",
+      "path": "illustrations/editorial/underline.svg",
+      "tags": [
+        "underline",
+        "emphasis",
+        "stroke",
+        "line",
+        "annotation",
+        "editorial"
+      ],
+      "description": "Soft underline stroke for emphasis on real on-screen text.",
+      "recommended_usage": [
+        "emphasize a word on screen"
+      ]
+    }
+  ],
+  "open_source_policy": "This repo ships only code and metadata. Every third-party file is fetched or downloaded by each user onto their own machine and stays out of git. Sources whose terms require permission for use with an editing application are excluded (DrawKit: its licence forbids use in template creators or applications).",
+  "motion": [
+    {
+      "id": "editorial-proof",
+      "name": "Floating proof",
+      "functions": [
+        "proofIn",
+        "proofOut"
+      ],
+      "tags": [
+        "proof",
+        "screenshot",
+        "result",
+        "document",
+        "evidence",
+        "float",
+        "card",
+        "overlay"
+      ],
+      "when": "The speaker says \"here is the result\" or cites a real document.",
+      "description": "A real screenshot floats in over the footage, stays readable, then exits on a sentence boundary.",
+      "timing": "in 0.40–0.52 s; readable ≥ 1.3 s; out 0.20–0.32 s",
+      "hold": 2.1,
+      "html": "  <div id=\"{id}\" style=\"position:absolute; left:72px; right:72px; top:520px; border-radius:20px; overflow:hidden; box-shadow:0 22px 60px rgba(0,0,0,.45);\"><img src=\"assets/your-real-screenshot.png\" alt=\"\" style=\"display:block; width:100%;\"></div>",
+      "timeline": "HFEditorial.proofIn(tl, \"{target}\", {at}); HFEditorial.proofOut(tl, \"{target}\", {exit});"
+    },
+    {
+      "id": "editorial-pip",
+      "name": "Picture-in-picture",
+      "functions": [
+        "pipIn"
+      ],
+      "tags": [
+        "pip",
+        "picture-in-picture",
+        "inset",
+        "camera",
+        "screen",
+        "recording",
+        "demo",
+        "floating"
+      ],
+      "when": "The speaker explains a real on-screen action.",
+      "description": "Screen recording full frame with the camera footage as a small inset.",
+      "timing": "in 0.40–0.55 s; hard cut out",
+      "hold": 3,
+      "html": "  <div id=\"{id}\" style=\"position:absolute; right:72px; bottom:560px; width:300px; height:400px; border-radius:20px; overflow:hidden;\"><video src=\"assets/your-camera.mp4\" muted playsinline style=\"width:100%; height:100%; object-fit:cover;\"></video></div>",
+      "timeline": "HFEditorial.pipIn(tl, \"{target}\", {at});"
+    },
+    {
+      "id": "editorial-focus",
+      "name": "Focus / click",
+      "functions": [
+        "focusIn",
+        "focusOut"
+      ],
+      "tags": [
+        "focus",
+        "click",
+        "button",
+        "ui",
+        "control",
+        "dim",
+        "outline",
+        "callout",
+        "highlight"
+      ],
+      "when": "A specific UI control is named or clicked.",
+      "description": "Dims the rest of a real screen capture 30–45% and outlines the control (no glow).",
+      "timing": "in 0.18–0.26 s; release with focusOut",
+      "hold": 1.2,
+      "html": "  <div id=\"{id}-dim\" style=\"position:absolute; inset:0; background:#000;\"></div>\n  <div id=\"{id}-outline\" style=\"position:absolute; left:120px; top:900px; width:840px; height:140px; border:5px solid #b6ccee; border-radius:22px;\"></div>",
+      "timeline": "HFEditorial.focusIn(tl, \"{target}-dim\", \"{target}-outline\", {at}); HFEditorial.focusOut(tl, \"{target}-dim\", \"{target}-outline\", {exit});"
+    },
+    {
+      "id": "editorial-match-expand",
+      "name": "Match expand",
+      "functions": [
+        "matchExpand"
+      ],
+      "tags": [
+        "expand",
+        "match",
+        "cut",
+        "zoom",
+        "thumbnail",
+        "fullscreen",
+        "cutaway",
+        "transition"
+      ],
+      "when": "A thumbnail becomes the same screenshot full screen.",
+      "description": "Expands a real thumbnail into the same image full frame. Never between unrelated images.",
+      "timing": "0.48–0.65 s",
+      "hold": 0.6,
+      "html": "  <img id=\"{id}-thumb\" src=\"assets/your-real-screenshot.png\" alt=\"\" style=\"position:absolute; left:340px; top:700px; width:400px; border-radius:22px;\">\n  <img id=\"{id}\" src=\"assets/your-real-screenshot.png\" alt=\"\" style=\"position:absolute; inset:0; width:100%; height:100%; object-fit:cover;\">",
+      "timeline": "HFEditorial.matchExpand(tl, \"{target}-thumb\", \"{target}\", {at});"
+    },
+    {
+      "id": "editorial-steps",
+      "name": "Step reveal",
+      "functions": [
+        "stepsIn"
+      ],
+      "tags": [
+        "steps",
+        "list",
+        "sequence",
+        "instructions",
+        "numbered",
+        "process",
+        "reveal",
+        "indicator"
+      ],
+      "when": "Explaining ordered instructions, 2–4 steps.",
+      "description": "Reveals real steps one by one in the approved words, without covering the footage.",
+      "timing": "0.35–0.55 s stagger",
+      "hold": 3,
+      "html": "  <div id=\"{id}\" style=\"position:absolute; left:72px; top:600px;\"><div class=\"step\">01  First step</div><div class=\"step\">02  Second step</div><div class=\"step\">03  Third step</div></div>",
+      "timeline": "HFEditorial.stepsIn(tl, document.querySelectorAll(\"{target} .step\"), {at});"
+    },
+    {
+      "id": "editorial-comparison",
+      "name": "Before / after comparison",
+      "functions": [
+        "comparisonReveal"
+      ],
+      "tags": [
+        "before",
+        "after",
+        "compare",
+        "comparison",
+        "versus",
+        "split",
+        "options"
+      ],
+      "when": "A genuine side-by-side of two real images or screenshots.",
+      "description": "Reveals the \"after\" panel beside the \"before\" with a divider. Labels explicit; never imply an altered result.",
+      "timing": "0.55–0.75 s",
+      "hold": 3,
+      "html": "  <img id=\"{id}-before\" src=\"assets/real-before.png\" alt=\"\" style=\"position:absolute; inset:0; width:100%; height:100%; object-fit:cover;\">\n  <img id=\"{id}-after\" src=\"assets/real-after.png\" alt=\"\" style=\"position:absolute; inset:0; width:100%; height:100%; object-fit:cover;\">\n  <div id=\"{id}-divider\" style=\"position:absolute; left:50%; top:0; bottom:0; width:2px; background:#fff;\"></div>",
+      "timeline": "HFEditorial.comparisonReveal(tl, \"{target}-after\", \"{target}-divider\", {at});"
+    },
+    {
+      "id": "editorial-wipe",
+      "name": "Wipe / split reveal",
+      "functions": [
+        "wipeIn"
+      ],
+      "tags": [
+        "wipe",
+        "mask",
+        "reveal",
+        "split",
+        "transition",
+        "slide"
+      ],
+      "when": "Switching between two related real visuals. Use rarely; hard cuts otherwise.",
+      "description": "Clean geometric mask opening, no wipe texture.",
+      "timing": "0.30–0.45 s",
+      "hold": 2,
+      "html": "  <div id=\"{id}\" style=\"position:absolute; inset:0;\"><video src=\"assets/your-real-shot.mp4\" muted playsinline style=\"width:100%; height:100%; object-fit:cover;\"></video></div>",
+      "timeline": "HFEditorial.wipeIn(tl, \"{target}\", {at});"
+    },
+    {
+      "id": "editorial-draw-line",
+      "name": "Arrow / line draw-on",
+      "functions": [
+        "drawLine"
+      ],
+      "tags": [
+        "arrow",
+        "line",
+        "connector",
+        "annotation",
+        "underline",
+        "draw",
+        "point",
+        "shapes"
+      ],
+      "when": "The viewer needs help locating something in real UI.",
+      "description": "Draws an SVG path on at the moment it becomes useful (pairs with the editorial overlays). Never over text or a face.",
+      "timing": "0.25–0.40 s",
+      "hold": 1.5,
+      "html": "  <svg id=\"{id}\" viewBox=\"0 0 400 260\" fill=\"none\" style=\"position:absolute; left:340px; top:760px; width:400px;\"><path d=\"M24 226C62 223 90 191 112 151c25-46 76-84 161-87\" stroke=\"#A7C4EE\" stroke-width=\"5\" stroke-linecap=\"round\"/></svg>",
+      "timeline": "HFEditorial.drawLine(tl, \"{target} path\", {at});"
+    }
+  ]
+}

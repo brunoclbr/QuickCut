@@ -1,0 +1,35 @@
+{
+  "approval": "Must ask owner before using sound in video",
+  "cues": [
+    {
+      "id": "airy-swish",
+      "file": "airy-swish.wav",
+      "seconds": 0.43,
+      "onset_seconds": 0.0332,
+      "peak_seconds": 0.1849,
+      "use": "Gentle onscreen screenshot entrance or meaningful scene slide; often better to omit.",
+      "permission": "Original generated waveform included for local and commercial video use; opt-in only.",
+      "default_gain_db": -15
+    },
+    {
+      "id": "tactile-click",
+      "file": "tactile-click.wav",
+      "seconds": 0.145,
+      "onset_seconds": 0.0002,
+      "peak_seconds": 0.0035,
+      "use": "Actual UI click synchronized to the recorded click, not every caption.",
+      "permission": "Original generated waveform included for local and commercial video use; opt-in only.",
+      "default_gain_db": -18
+    },
+    {
+      "id": "soft-land",
+      "file": "soft-land.wav",
+      "seconds": 0.28,
+      "onset_seconds": 0.0004,
+      "peak_seconds": 0.0041,
+      "use": "Quiet screenshot/card settle, only if impactful and approved.",
+      "permission": "Original generated waveform included for local and commercial video use; opt-in only.",
+      "default_gain_db": -18
+    }
+  ]
+}

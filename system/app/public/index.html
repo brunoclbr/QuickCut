@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Video companion</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <a class="brand" href="#videos">Video companion<span>LOCAL · READ-ONLY</span></a>
+      <nav aria-label="Main navigation">
+        <button data-tab="videos"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="1.5"/><path d="M10 9.5v5l4.5-2.5z"/></svg><span class="num">01</span>Videos</button>
+        <button data-tab="workspace"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="11" height="16" rx="1.5"/><path d="M17 6h4M17 10h4M17 14h4"/></svg><span class="num">02</span>Workspace</button>
+        <button data-tab="setup"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg><span class="num">03</span>Setup & preferences</button>
+      </nav>
+      <p class="sidebar-note">Created with Codex.<br>Reviewed here.</p>
+    </aside>
+    <div class="content">
+      <header class="topbar">
+        <span id="crumb" class="mono"></span>
+        <button id="refresh" class="ghost" title="Re-read projects and files from disk">Refresh files</button>
+      </header>
+      <aside id="notice" hidden>
+        <span><strong>Make it yours.</strong> Customize through Codex or your AI app of choice. Changing the core folder structure may break the workflow; keep a backup.</span>
+        <button id="dismiss" class="ghost">Got it</button>
+      </aside>
+      <main id="main"><p class="muted">Reading your local folder…</p></main>
+      <footer><span id="folder" class="mono"></span><span>Read-only (except the ElevenLabs key) · Local files · No embedded AI · No video editing controls</span></footer>
+    </div>
+  </div>
+  <div id="status" role="status" aria-live="polite"></div>
+</body>
+</html>

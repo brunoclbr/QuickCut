@@ -1,0 +1,45 @@
+START HERE — first-time setup (about 20 minutes, only once)
+
+You need: a Mac and the Codex desktop app (or another AI app, such as Claude Code).
+
+What gets downloaded during setup (your AI app asks before installing anything; about 1.5-2 GB in total):
+- Free tools: Homebrew (if missing), Node.js, FFmpeg, HyperFrames (the video renderer,
+  with its own browser) and whisper.cpp with a speech model (for captions from your voice).
+- Free icons, animations and sound effects for the asset library (step 4).
+- Optional: the ElevenLabs voiceover tools (step 6, about 100 MB). Voiceovers need an
+  ElevenLabs account and use paid credits, always after your OK.
+Full list with versions: README.md, section "What gets downloaded".
+
+>> Whenever this guide says "Type", it means type it into the chat in Codex (or your AI app), just like sending a message. <<
+
+1. Move this folder somewhere permanent, like Documents. Don't use it from inside the ZIP.
+   After setup, don't rename or move it. If you ever need to: close Codex, rename or
+   move it, open it again in Codex and type: "I renamed this folder from OLD NAME to
+   NEW NAME, update everything."
+2. In Codex, open this whole folder as a project.
+3. Type: "Set up this video editing folder for me."
+   It checks your Mac, installs the free tools it needs and makes a short test video.
+   Say yes when it asks to install something.
+4. Type: "Set up the asset library."
+   It installs free icons, animations and sound effects, then asks you to download
+   a few free extras in your browser:
+   - Open Stickers: https://craftwork.gumroad.com/l/gxaylb (type 0 as the price)
+   - Mixkit sound effects: https://mixkit.co/free-sound-effects/ (the free ones you need to download one by one, no account needed)
+   Leave them in your Downloads folder. Don't unzip or move them.
+   Then type: "hey i just downloaded "XYZ" and "ABC" can you move them from the downloads folder into this project and integrate properly?
+5. Type: "Interview me about my editing style."
+   Your answers are saved and used for every video.
+6. Optional, AI voiceovers (paid, from ElevenLabs): type "Open the app.", go to
+   Setup & preferences → ElevenLabs → Connect, and follow the steps there.
+   Paste your key only in that box, never in the chat. Then just ask for a voiceover;
+   it always shows you the script and the cost and waits for your OK.
+
+Every video after that:
+- Copy your video into  workspace/drop-videos-here
+- Type: "I put a new video in drop-videos-here."
+- To watch drafts and see where everything is, type: "Open the app."
+- Your finished videos appear in  workspace/finished-videos
+
+Your videos stay on your computer; nothing is uploaded. (Only if you use AI voiceovers,
+the scripts you approve are sent to ElevenLabs to be spoken.)
+If something goes wrong, just describe it to your AI app in plain words.

@@ -1,0 +1,13 @@
+{
+  "name": "local-editing-voiceover",
+  "private": true,
+  "type": "module",
+  "description": "Optional ElevenLabs voiceovers with synced caption timings. Only needed when a video uses AI narration.",
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@elevenlabs/elevenlabs-js": "2.71.0"
+  },
+  "engines": { "node": ">=22" }
+}

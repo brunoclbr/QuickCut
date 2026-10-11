@@ -1,0 +1,9 @@
+{
+  "name": "asset-library-example",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "npx --yes hyperframes@0.8.140 check",
+    "render": "npx --yes hyperframes@0.8.140 render"
+  }
+}

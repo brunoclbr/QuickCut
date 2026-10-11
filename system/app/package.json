@@ -1,0 +1,12 @@
+{
+  "name": "local-editing-companion",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "open": "node launch.mjs",
+    "test": "node --test test/*.test.mjs",
+    "smoke": "node test/browser-smoke.mjs"
+  },
+  "engines": { "node": ">=22" }
+}

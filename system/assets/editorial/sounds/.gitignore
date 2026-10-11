@@ -1,0 +1,6 @@
+# These three files were synthesized specifically for this optional toolkit.
+# The root project ignores *.wav by default because footage and imports stay private.
+# Whitelist only these original redistributable sound cues.
+!/airy-swish.wav
+!/tactile-click.wav
+!/soft-land.wav

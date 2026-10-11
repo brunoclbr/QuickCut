@@ -1,0 +1,41 @@
+.DS_Store
+system/app/.runtime.json
+system/app/.runtime.log
+
+# Footage, renders and models stay local (private and large)
+*.mp4
+*.MP4
+*.mov
+*.MOV
+*.m4v
+*.webm
+*.wav
+*.mp3
+*.m4a
+workspace/videos/*
+!workspace/videos/README.md
+workspace/assets/models/
+workspace/drop-videos-here/*
+!workspace/drop-videos-here/README.txt
+workspace/finished-videos/*
+!workspace/finished-videos/README.md
+
+# HyperFrames caches
+.thumbnails/
+.waveform-cache/
+.transcode-cache/
+.hyperframes/
+
+# Asset library: installed files stay local (licences in system/assets/catalog.json). Metadata stays tracked.
+system/assets/vendor/
+system/assets/example/assets/
+workspace/assets/icons/
+workspace/assets/illustrations/
+workspace/assets/animations/
+workspace/assets/sounds/*/
+workspace/assets/.library-lock.json
+workspace/assets/imports/
+
+# Voiceover: SDK install and the local connection record (account name, checks; never the key)
+system/voiceover/node_modules/
+system/voiceover/.connection.json
