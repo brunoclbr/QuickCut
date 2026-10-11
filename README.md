@@ -1,4 +1,47 @@
-# Local video editing with your AI app
+# QuickCut
+
+**You direct. AI edits.**
+
+Turn raw footage into professional videos by talking to your AI app — Codex, Claude Code, or your terminal assistant of choice. No timeline to learn, no clips to drag.
+
+![Open Source](https://img.shields.io/badge/license-MIT-blue) ![Free to Use](https://img.shields.io/badge/free%20to%20use-yes-brightgreen) ![AI-Powered Editing](https://img.shields.io/badge/AI--powered-editing-purple)
+
+<p align="center">
+  <img src="https://placehold.co/360x200?text=01+-+Raw" alt="01 — Raw footage (placeholder, replace with a real GIF)" width="30%">
+  <img src="https://placehold.co/360x200?text=02+-+Editing" alt="02 — Editing in progress (placeholder, replace with a real GIF)" width="30%">
+  <img src="https://placehold.co/360x200?text=03+-+Final" alt="03 — Finished video (placeholder, replace with a real GIF)" width="30%">
+</p>
+
+<p align="center"><em>Placeholders. Replace with three GIFs recorded from a real QuickCut project: raw footage → an editing conversation → the finished export.</em></p>
+
+## Get started in minutes
+
+1. Download QuickCut from GitHub and keep the unzipped folder somewhere permanent (not inside the ZIP, not in an undownloaded cloud placeholder).
+2. Open the folder as a project in your AI app — the Codex desktop app, or a terminal assistant such as Claude Code started in this folder — and let it walk you through setup. No terminal experience required.
+3. Copy your footage into `workspace/drop-videos-here/` and describe the edit you want in plain language.
+4. Optionally connect ElevenLabs for AI voiceovers with word-synced captions.
+
+Full setup steps, folder map, and terminal commands are below.
+
+---
+
+## The philosophy
+
+**AI shouldn't replace your creativity. It should accelerate your execution.**
+
+Think the finished video through first — pacing, framing, transitions, captions, sound, effects, whether images sit in front of or behind other elements. Once that's in your head, hand it to QuickCut as context and let the AI app handle the clicky stuff.
+
+QuickCut isn't a video editor where you manually move clips around. You direct the creative decisions; the AI app and its tools do the technical execution.
+
+## Enjoying QuickCut?
+
+QuickCut is built and maintained as an open-source project. If it helps you make something great, consider starring the repository — it helps others find it. If you build on it, a link back to the original project is appreciated.
+
+## License
+
+MIT — see [LICENSE](LICENSE). You're free to use, modify, and redistribute QuickCut's code; just keep the copyright and license notice. Fonts, sounds, and other third-party assets you add to `workspace/assets/` are not covered by this license — their own terms are your responsibility (see `system/assets/README.md`).
+
+---
 
 **Codex or your AI app of choice (such as Claude Code) is the main interface.** This folder holds your saved preferences and video projects. The local app is a read-only companion: see where files are, watch drafts and copy instructions into your AI app. It never changes anything itself, is not a timeline editor and does not run AI.
 
@@ -47,6 +90,7 @@ Your videos never leave your Mac. The only online service is ElevenLabs, and onl
 ```text
 AGENTS.md                         AI app entry instructions
 CLAUDE.md                         Points Claude Code to AGENTS.md
+LICENSE                           MIT license for QuickCut's code
 system/                           Customize carefully
   editing-brain.md                 Editing process
   prompts.md                      Instructions to copy into your AI app
@@ -85,6 +129,9 @@ npm --prefix system/voiceover test     # voiceover tests (mocked, free)
 The preferred address is `http://127.0.0.1:3005`, configured in `system/app/config.json` (chosen to stay clear of other local tools that use 3000). If occupied, the launcher prints another free local port. It never kills an existing service. See `system/app/README.md` for maintenance.
 
 ## The three pages
+
+![QuickCut's companion app — Videos page, showing project folders, drop-folder notes, and approved exports](docs/images/app-snapshot.png)
+
 - **Videos:** the drop folder (with a copyable "start this video" instruction), your finished videos, and every project with its drafts, source and approval state.
 - **Workspace:** watch drafts at their real size and shape, see each file's details, and copy feedback or approval for your AI app. Footage, brief and feedback history sit in folded sections below.
 - **Setup & preferences:** what is installed (only what has actually been checked), the ElevenLabs connection (the only thing you can change here, so your key never goes through the chat), your preferences and setup notes, the asset library, and the optional editing-factor explorer. Selections only build instructions; illustrations do not approve fonts, colors or assets.
