@@ -279,13 +279,15 @@ export async function search(ctx, words, { category, format, source, onlyInstall
     if (onlyInstalled && !ok) continue;
     results.push({ ...e, score, installed: ok, license: licenseSummary(state.catalog.sources[e.source]) });
   }
-  if ((!category || category === 'motion') && (!format || format === 'js') && (!source || source === 'editorial')) {
+  if ((!category || category === 'motion') && (!format || format === 'js')) {
     for (const m of state.catalog.motion || []) {
+      if (source && source !== (m.script || 'editorial')) continue;
       const hay = [m.name, m.description, m.when].join(' ').toLowerCase();
       const score = terms.reduce((s, t) => s + (m.tags?.includes(t) ? 3 : 0) + (m.id.includes(t) ? 2 : 0) + (hay.includes(t) ? 1 : 0), 0);
       if (terms.length && !score) continue;
       // Ranked above files on a tie: the owner's toolkit has priority for editorial moves.
-      results.push({ ...m, category: 'motion', format: 'js', source: 'editorial', score: score + 0.5, installed: true, license: 'original toolkit code (system/assets/editorial)' });
+      const own = ownScripts[m.script];
+      results.push({ ...m, category: 'motion', format: 'js', source: m.script || 'editorial', score: score + 0.5, installed: true, license: own ? `original code (${own})` : 'original toolkit code (system/assets/editorial)' });
     }
   }
   results.sort((a, b) => b.score - a.score || Number(b.installed) - Number(a.installed) || a.id.localeCompare(b.id));
@@ -302,6 +304,10 @@ function licenseSummary(src) {
 }
 
 // Resolves an id or a phosphor:<weight>/<name> reference to an entry.
+// Motion entries that live in this repo's own scripts (anything else is the Editorial Motion Toolkit).
+const ownScripts = { annotate: 'system/assets/hf/annotate.js', edit: 'system/assets/hf/edit.js' };
+const globals = { annotate: 'HFAnnotate', edit: 'HFEdit' };
+
 export async function resolve(ctx, ref, state) {
   state ||= await load(ctx);
   const icon = /^phosphor:(regular|bold|fill|duotone)\/([a-z0-9-]+)$/.exec(ref);
@@ -309,7 +315,7 @@ export async function resolve(ctx, ref, state) {
   if (variant) { const base = state.entries.find(e => e.id === variant[1]); if (base) return { ...base, id: `${base.id}-${variant[2]}`, path: base.path.replace(/\/regular\/(.+)\.svg$/, `/${variant[2]}/$1-${variant[2]}.svg`) }; }
   if (icon) return { id: `phosphor-${icon[2]}${icon[1] === 'regular' ? '' : '-' + icon[1]}`, name: icon[2], category: 'icon', format: 'svg', source: 'phosphor', path: `icons/phosphor/${icon[1]}/${icon[2]}${icon[1] === 'regular' ? '' : '-' + icon[1]}.svg`, tags: icon[2].split('-') };
   const motion = (state.catalog.motion || []).find(m => m.id === ref);
-  if (motion) return { ...motion, category: 'motion', format: 'js', source: 'editorial' };
+  if (motion) return { ...motion, category: 'motion', format: 'js', source: motion.script || 'editorial' };
   const entry = state.entries.find(e => e.id === ref);
   if (!entry) throw new Error(`no asset with id ${ref} (try: search)`);
   return entry;
@@ -324,14 +330,15 @@ export async function use(ctx, refs, project, { at = 0, track: baseTrack = 5 } =
   const copy = async (from, rel) => { await fs.mkdir(path.dirname(path.join(lib, rel)), { recursive: true }); await fs.copyFile(from, path.join(lib, rel)); };
   await copy(abs(ctx, 'system/assets/hf/motion.js'), 'motion.js');
   let needsLottie = false, needsEditorial = false;
+  const needsScripts = new Set();
   for (const [i, ref] of refs.entries()) {
     const track = baseTrack + i;
     const e = await resolve(ctx, ref, state);
     if (e.category === 'motion') {
-      needsEditorial = true;
+      if (ownScripts[e.script]) needsScripts.add(e.script); else needsEditorial = true;
       const target = '#' + e.id, exit = Math.round((at + e.hold) * 1000) / 1000;
       const calls = e.timeline.replaceAll('{target}', target).replaceAll('{at}', at).replaceAll('{exit}', exit);
-      snippets.push(`<!-- ${e.name}: ${e.when} Real media only. HyperFrames owns the clip's visibility, so HFEditorial animates the child. See system/assets/editorial/RECIPES.md -->
+      snippets.push(`<!-- ${e.name}: ${e.when} Real media only. HyperFrames owns the clip's visibility, so ${ownScripts[e.script] ? `${globals[e.script]} animates the child. See system/assets/README.md` : 'HFEditorial animates the child. See system/assets/editorial/RECIPES.md'} -->
 <div id="${e.id}-host" class="clip" data-start="${at}" data-duration="${Math.round((exit - at + 0.5) * 1000) / 1000}" data-track-index="${track}" style="position:absolute; inset:0;">
 ${e.html.replaceAll('{id}', e.id)}
 </div>
@@ -371,9 +378,10 @@ ${inner}
   }
   if (needsLottie) await copy(abs(ctx, 'system/assets/vendor/lottie.min.js'), 'lottie.min.js');
   if (needsEditorial) await copy(abs(ctx, 'system/assets/editorial/editorial.js'), 'editorial.js');
+  for (const name of needsScripts) await copy(abs(ctx, ownScripts[name]), path.basename(ownScripts[name]));
   const hasGsap = await exists(path.join(dir, 'gsap.min.js'));
   if (!hasGsap) await copy(abs(ctx, 'system/assets/vendor/gsap.min.js'), 'gsap.min.js');
-  const scripts = [!hasGsap && `<script src="assets/library/gsap.min.js"></script>`, `<script src="assets/library/motion.js"></script>`, needsEditorial && `<script src="assets/library/editorial.js"></script>`, needsLottie && `<script src="assets/library/lottie.min.js"></script>`].filter(Boolean);
+  const scripts = [!hasGsap && `<script src="assets/library/gsap.min.js"></script>`, `<script src="assets/library/motion.js"></script>`, needsEditorial && `<script src="assets/library/editorial.js"></script>`, ...[...needsScripts].map(name => `<script src="assets/library/${path.basename(ownScripts[name])}"></script>`), needsLottie && `<script src="assets/library/lottie.min.js"></script>`].filter(Boolean);
   return { copied_to: path.relative(process.cwd(), lib), scripts, snippets };
 }
 

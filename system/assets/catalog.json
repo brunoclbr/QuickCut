@@ -1752,6 +1752,214 @@
       "hold": 1.5,
       "html": "  <svg id=\"{id}\" viewBox=\"0 0 400 260\" fill=\"none\" style=\"position:absolute; left:340px; top:760px; width:400px;\"><path d=\"M24 226C62 223 90 191 112 151c25-46 76-84 161-87\" stroke=\"#A7C4EE\" stroke-width=\"5\" stroke-linecap=\"round\"/></svg>",
       "timeline": "HFEditorial.drawLine(tl, \"{target} path\", {at});"
+    },
+    {
+      "id": "annotate-sketch",
+      "name": "Hand-drawn illustration",
+      "script": "annotate",
+      "functions": [
+        "sketchIn",
+        "sketchPart",
+        "sketchEmphasis",
+        "sketchOut"
+      ],
+      "tags": [
+        "sketch",
+        "illustration",
+        "drawing",
+        "diagram",
+        "hand-drawn",
+        "stroke",
+        "figure",
+        "explain",
+        "technique"
+      ],
+      "when": "A real drawing or diagram explains a position or movement that the footage shows at the same time.",
+      "description": "An inline SVG drawing reveals stroke by stroke, body part after body part; one part (e.g. its arrow) can draw with the movement; other parts can recede for emphasis; it retracts cleanly. Group strokes with <g data-part=\"name\"> to control the order.",
+      "timing": "draw 0.9–1.1 s, finished before the key moment; emphasis 0.2 + hold 0.4–0.6 + 0.2 s; out 0.36 s",
+      "hold": 2.4,
+      "html": "  <svg id=\"{id}\" viewBox=\"0 0 900 1000\" style=\"position:absolute; right:72px; top:360px; width:300px; height:333px; overflow:visible;\"><!-- paste the drawing's elements here, grouped in <g data-part=\"…\"> --></svg>",
+      "timeline": "HFAnnotate.sketchIn(tl, \"{target}\", {at}); HFAnnotate.sketchOut(tl, \"{target}\", {exit});"
+    },
+    {
+      "id": "annotate-bar-path",
+      "name": "Measured bar path",
+      "script": "annotate",
+      "functions": [
+        "trailIn",
+        "trailOut"
+      ],
+      "tags": [
+        "bar",
+        "path",
+        "trajectory",
+        "tracking",
+        "barbell",
+        "line",
+        "motion",
+        "follow",
+        "trail"
+      ],
+      "when": "Showing where an object really travelled (a barbell, a ball), from tracked or hand-read positions.",
+      "description": "A line whose tip sits exactly on each measured position at its time, with a dot or arrowhead riding the tip. Measure with node system/assets/track.mjs (or read keyframes off frames); never invent points. The head leaves where measurements stop.",
+      "timing": "follows the footage 1:1; hold ≤ 0.6 s after the move; out 0.3 s",
+      "hold": 2,
+      "html": "  <svg viewBox=\"0 0 1080 1920\" style=\"position:absolute; inset:0; width:100%; height:100%; overflow:visible;\"><path id=\"{id}-edge\" fill=\"none\" stroke=\"#111925\" stroke-opacity=\".55\" stroke-width=\"8\" stroke-linecap=\"round\"/><path id=\"{id}\" fill=\"none\" stroke=\"#fff\" stroke-opacity=\".85\" stroke-width=\"4\" stroke-linecap=\"round\"/><circle id=\"{id}-dot\" r=\"9\" fill=\"#3b82f6\" stroke=\"#fff\" stroke-width=\"2.5\"/></svg>",
+      "timeline": "HFAnnotate.trailIn(tl, { paths: [\"{target}-edge\", \"{target}\"], head: \"{target}-dot\" }, POINTS /* [{ t, x, y }] composition seconds and px */); HFAnnotate.trailOut(tl, { paths: [\"{target}-edge\", \"{target}\"] }, {exit});"
+    },
+    {
+      "id": "annotate-marker",
+      "name": "Position marker",
+      "script": "annotate",
+      "functions": [
+        "markerIn",
+        "markerOut"
+      ],
+      "tags": [
+        "marker",
+        "position",
+        "ring",
+        "callout",
+        "label",
+        "highlight",
+        "point",
+        "depth",
+        "annotation"
+      ],
+      "when": "Pointing at a measured position in the frame (a joint, the bar at lockout), best on a hold or freeze frame.",
+      "description": "A ring draws around a measured point, then an optional leader line and a short label. No glow, no bounce.",
+      "timing": "ring 0.34 s, line 0.27 s, label 0.3 s; readable ≥ 0.6 s; out 0.22 s",
+      "hold": 1.4,
+      "html": "  <svg viewBox=\"0 0 1080 1920\" style=\"position:absolute; inset:0; width:100%; height:100%; overflow:visible;\"><circle id=\"{id}\" cx=\"540\" cy=\"900\" r=\"60\" fill=\"none\" stroke=\"#3b82f6\" stroke-width=\"4\"/><path id=\"{id}-lead\" d=\"M600 900 L1008 900\" fill=\"none\" stroke=\"#fff\" stroke-width=\"3\"/></svg>\n  <div id=\"{id}-label\" style=\"position:absolute; right:72px; top:836px; color:#fff; font:500 34px Inter, sans-serif;\">Label</div>",
+      "timeline": "HFAnnotate.markerIn(tl, { ring: \"{target}\", lead: \"{target}-lead\", label: \"{target}-label\" }, {at}); HFAnnotate.markerOut(tl, { ring: \"{target}\", lead: \"{target}-lead\", label: \"{target}-label\" }, {exit});"
+    },
+    {
+      "id": "edit-title",
+      "name": "Exercise / section title",
+      "script": "edit",
+      "functions": [
+        "titleIn",
+        "titleOut"
+      ],
+      "tags": [
+        "title",
+        "section",
+        "chapter",
+        "exercise",
+        "heading",
+        "number",
+        "label",
+        "typography",
+        "mask",
+        "reveal"
+      ],
+      "when": "A new section or exercise starts and the viewer needs its name.",
+      "description": "Typographic title: a small muted number and short accent rule, then the name rising out of a mask as one line (never letter by letter). Exits upward through the same mask. No cards or pills.",
+      "timing": "rule and number 0.4 s, name 0.5 s after 0.08 s, power3.out; out 0.32 s power2.in",
+      "hold": 2.6,
+      "html": "  <div id=\"{id}\" style=\"position:absolute; left:72px; bottom:29%; color:#fff;\"><div style=\"display:flex; align-items:center; gap:14px;\"><span class=\"t-num\" style=\"font:500 28px Inter, sans-serif; color:#9ca3af; letter-spacing:.08em;\">01</span><i class=\"t-rule\" style=\"display:block; width:56px; height:2px; background:#3b82f6;\"></i></div><div class=\"t-mask\" style=\"overflow:hidden; margin-top:10px; padding-bottom:6px;\"><div class=\"t-text\" data-layout-allow-overflow style=\"font:500 64px/1.1 Inter, sans-serif; white-space:nowrap;\">Section name</div></div></div>",
+      "timeline": "HFEdit.titleIn(tl, \"{target}\", {at}); HFEdit.titleOut(tl, \"{target}\", {exit});"
+    },
+    {
+      "id": "edit-punch",
+      "name": "Controlled punch-in",
+      "script": "edit",
+      "functions": [
+        "punch",
+        "safeScale"
+      ],
+      "tags": [
+        "punch",
+        "zoom",
+        "reframe",
+        "push",
+        "close-up",
+        "emphasis",
+        "camera",
+        "framing"
+      ],
+      "when": "A held position or detail deserves a closer look (a freeze, a static setup), not during fast action.",
+      "description": "Eases footage (and any annotation layer registered to it) in to a scale around an anchor, holds, eases back. The `keep` box (athlete, bar) is never cropped: the scale is reduced until it fits. Wrap clips in a non-clip div and punch the wrapper.",
+      "timing": "in 0.45–0.9 s, hold, out 0.3 s, power2.inOut; scale 1.04–1.10 on 1080p sources",
+      "hold": 1.6,
+      "html": "  <div id=\"{id}\" style=\"position:absolute; inset:0;\"><!-- put the footage <video class=\\\"clip\\\"> elements (and footage-registered overlays) inside this wrapper --></div>",
+      "timeline": "HFEdit.punch(tl, [\"{target}\"], {at}, { scale: 1.08, anchor: { x: 540, y: 960 }, keep: { x: 200, y: 100, w: 680, h: 1400 }, in: 0.6, hold: 0.6, out: 0.35 });"
+    },
+    {
+      "id": "edit-card",
+      "name": "Full-screen graphic card",
+      "script": "edit",
+      "functions": [
+        "cardIn",
+        "cardOut",
+        "flyTo",
+        "offsetTo"
+      ],
+      "tags": [
+        "card",
+        "cutaway",
+        "fullscreen",
+        "graphic",
+        "overview",
+        "transition",
+        "chapter",
+        "interstitial"
+      ],
+      "when": "A brief overview or chapter break between major sections (about 1 s), e.g. the steps that follow.",
+      "description": "A solid card wipes in over the footage (mask, no texture), holds typography and drawings, then wipes away; flyTo + offsetTo can carry one of its elements to its place over the footage so the graphic itself becomes the transition. No filter on the footage.",
+      "timing": "in 0.38 s, hold ≥ 0.8 s, out 0.42 s, power3.inOut; fly 0.55 s",
+      "hold": 1.2,
+      "html": "  <div id=\"{id}\" style=\"position:absolute; inset:0; background:#0f1114;\"><div style=\"position:absolute; left:72px; top:590px; color:#9ca3af; font:500 28px Inter, sans-serif; letter-spacing:.1em;\">Overline</div></div>",
+      "timeline": "HFEdit.cardIn(tl, \"{target}\", {at}); HFEdit.cardOut(tl, \"{target}\", {exit});"
+    },
+    {
+      "id": "annotate-handoff",
+      "name": "Illustration handoff",
+      "script": "annotate",
+      "functions": [
+        "handoff"
+      ],
+      "tags": [
+        "handoff",
+        "transition",
+        "illustration",
+        "sketch",
+        "drawing",
+        "section",
+        "swap"
+      ],
+      "when": "Moving from one demonstrated movement to the next, with a drawing for each.",
+      "description": "The outgoing drawing retracts along its strokes while the next one draws in the same place, so the illustrations carry the section change (pair it with a cut and, optionally, a swish).",
+      "timing": "out 0.36 s; next starts 0.1 s later and draws ~0.9 s",
+      "hold": 1.2,
+      "html": "  <!-- two inline SVG drawings in the same box, strokes grouped in <g data-part> -->",
+      "timeline": "HFAnnotate.handoff(tl, \"#drawing-a\", \"#drawing-b\", {at});"
+    },
+    {
+      "id": "annotate-callout",
+      "name": "Tracked callout",
+      "script": "annotate",
+      "functions": [
+        "calloutIn",
+        "calloutOut",
+        "follow"
+      ],
+      "tags": [
+        "callout",
+        "label",
+        "tracked",
+        "tracking",
+        "follow",
+        "marker",
+        "annotation",
+        "pointer"
+      ],
+      "when": "Naming a position on a moving subject (the bar at the hips, a joint), from measured positions.",
+      "description": "A ring, leader and short label drawn around 0,0 inside a <g> that rides measured points (track.mjs or hand-read keyframes); pass no points for a fixed callout on a freeze frame.",
+      "timing": "ring 0.34 s, leader, label; readable ≥ 0.8 s; out 0.22 s",
+      "hold": 1.4,
+      "html": "  <svg viewBox=\"0 0 1080 1920\" style=\"position:absolute; inset:0; width:100%; height:100%; overflow:visible;\"><g id=\"{id}\"><circle id=\"{id}-ring\" r=\"68\" fill=\"none\" stroke=\"#3b82f6\" stroke-width=\"4\"/><path id=\"{id}-lead\" d=\"M-68 0 L-96 0\" stroke=\"#fff\" stroke-width=\"3\"/><text id=\"{id}-label\" x=\"-108\" y=\"11\" text-anchor=\"end\" fill=\"#fff\" font-size=\"32\" font-weight=\"500\">Label</text></g></svg>",
+      "timeline": "HFAnnotate.calloutIn(tl, { group: \"{target}\", ring: \"{target}-ring\", lead: \"{target}-lead\", label: \"{target}-label\" }, {at}, { points: POINTS }); HFAnnotate.calloutOut(tl, { ring: \"{target}-ring\", lead: \"{target}-lead\", label: \"{target}-label\" }, {exit});"
     }
   ]
 }

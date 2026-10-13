@@ -146,3 +146,36 @@ test('ElevenLabs key: the only write, same-origin JSON only, saved to the store 
   assert.equal(f.fake.stored(), null);
   assert.equal((await fetch(`${f.url}/api/voiceover/connect`, { method: 'PUT', headers: { Origin: f.url } })).status, 405);
 });
+
+test('Show in Finder: same-origin JSON only, workspace files only, and it changes nothing', async t => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'editing-companion-reveal-'));
+  for (const folder of ['workspace/finished-videos', 'system']) await fs.mkdir(path.join(root, folder), { recursive: true });
+  await fs.writeFile(path.join(root, 'workspace/finished-videos/final.mp4'), 'final'); await fs.writeFile(path.join(root, 'system/x.md'), 'x');
+  const revealed = [];
+  const server = createApp({ root, voiceover: fakeVoiceover(root).voiceover, reveal: async file => { revealed.push(file); } });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const url = `http://127.0.0.1:${server.address().port}`;
+  t.after(async () => { await new Promise(resolve => server.close(resolve)); await fs.rm(root, { recursive: true, force: true }); });
+  const send = (body, headers = { Origin: url, 'Content-Type': 'application/json' }) => fetch(`${url}/api/reveal`, { method: 'POST', headers, body: JSON.stringify(body) });
+  assert.equal((await send({ path: 'workspace/finished-videos/final.mp4' })).status, 200);
+  assert.deepEqual(revealed, [await fs.realpath(path.join(root, 'workspace/finished-videos/final.mp4'))]);
+  assert.equal((await send({ path: 'workspace/finished-videos/final.mp4' }, { 'Content-Type': 'application/json' })).status, 403, 'no Origin');
+  assert.equal((await send({ path: 'workspace/finished-videos/final.mp4' }, { Origin: 'http://evil.example', 'Content-Type': 'application/json' })).status, 403, 'foreign Origin');
+  assert.equal((await send({ path: 'workspace/finished-videos/final.mp4' }, { Origin: url, 'Content-Type': 'text/plain' })).status, 415);
+  for (const bad of ['system/x.md', 'workspace/../system/x.md', '/etc/hosts', 'workspace/.hidden', 42]) assert.equal((await send({ path: bad })).status, 403, String(bad));
+  assert.equal(revealed.length, 1);
+  assert.equal(await fs.readFile(path.join(root, 'workspace/finished-videos/final.mp4'), 'utf8'), 'final');
+});
+
+test('state includes an asset overview grouped for the Setup page and no repo info outside git', async t => {
+  const f = await fixture(t);
+  for (const [file, text] of Object.entries({ 'workspace/assets/sounds/mixkit/Fast Whoosh.wav': 'w', 'workspace/assets/music/track.mp3': 'm', 'workspace/assets/fonts/inter/Inter.ttf': 'f', 'workspace/assets/icons/phosphor/regular/a.svg': '<svg/>' })) {
+    await fs.mkdir(path.dirname(path.join(f.root, file)), { recursive: true }); await fs.writeFile(path.join(f.root, file), text);
+  }
+  const state = await (await fetch(`${f.url}/api/state`)).json();
+  assert.deepEqual(state.assetOverview.sounds.map(s => [s.name, s.source]), [['Fast Whoosh.wav', 'mixkit']]);
+  assert.deepEqual(state.assetOverview.music.map(m => m.name), ['track.mp3']);
+  assert.deepEqual(state.assetOverview.fonts.map(m => m.name), ['Inter.ttf']);
+  assert.equal(state.assetOverview.counts.icons, 1);
+  assert.equal(state.repo, null);
+});
