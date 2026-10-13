@@ -28,10 +28,7 @@ The full first-time walkthrough, step by step, lives in [`START HERE.txt`](START
 
 Your video is **moved** (not copied) into its own project the moment your AI app picks it up. Approve a draft and it lands in `workspace/finished-videos/` — nothing else changes automatically.
 
-> 🚧 **TODO:** link a professionally edited video made with QuickCut here.
-
-> 📖 Here is a link to a full tutorial on how to make the most out of QuickCut, with my own personal experience and tips on video editing, and with the truths that no one tells you behind these tools: **coming soon**
-<!-- TODO: replace "coming soon" with the tutorial link once it is published. -->
+> 📖 Here is a link to a full tutorial on how to make the most out of QuickCut, with my own personal experience and tips on video editing, and with the truths that no one tells you behind these tools: **[read it on Substack](https://miraiengineering.substack.com/p/real-world-ai-no-tutorials-no-made)**
 
 
 
