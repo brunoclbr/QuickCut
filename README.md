@@ -7,12 +7,12 @@ Turn raw footage into professional videos by talking to your AI app — Codex, C
 ![Open Source](https://img.shields.io/badge/license-MIT-blue) ![Free to Use](https://img.shields.io/badge/free%20to%20use-yes-brightgreen) ![AI-Powered Editing](https://img.shields.io/badge/AI--powered-editing-purple)
 
 <p align="center">
-  <img src="https://placehold.co/360x200?text=01+-+Raw" alt="01 — Raw footage (placeholder, replace with a real GIF)" width="30%">
-  <img src="https://placehold.co/360x200?text=02+-+Editing" alt="02 — Editing in progress (placeholder, replace with a real GIF)" width="30%">
-  <img src="https://placehold.co/360x200?text=03+-+Final" alt="03 — Finished video (placeholder, replace with a real GIF)" width="30%">
+  <img src="docs/images/01-raw.gif" alt="01 — Raw footage, straight from the phone" width="30%">
+  <img src="docs/images/02-editing.gif" alt="02 — The same moment across drafts 01 to 10, edited by conversation" width="30%">
+  <img src="docs/images/03-final.gif" alt="03 — The approved, finished export" width="30%">
 </p>
 
-<p align="center"><em>Placeholders. Replace with three GIFs recorded from a real QuickCut project: raw footage → an editing conversation → the finished export.</em></p>
+<p align="center"><em>A real QuickCut project: raw footage → ten drafts of feedback and edits → the finished video.</em></p>
 
 ## Get started in minutes
 
@@ -26,13 +26,12 @@ The full first-time walkthrough, step by step, lives in [`START HERE.txt`](START
 
 ---
 
-<p align="center">
-  <img src="https://placehold.co/760x220?text=Drop+footage+%E2%86%92+talk+to+your+AI+app+%E2%86%92+finished+video" alt="Workflow diagram placeholder: drop footage in, describe the edit in conversation, get a finished video out" width="90%">
-</p>
-
 Your video is **moved** (not copied) into its own project the moment your AI app picks it up. Approve a draft and it lands in `workspace/finished-videos/` — nothing else changes automatically.
 
 > 🚧 **TODO:** link a professionally edited video made with QuickCut here.
+
+> 📖 Here is a link to a full tutorial on how to make the most out of QuickCut, with my own personal experience and tips on video editing, and with the truths that no one tells you behind these tools: **coming soon**
+<!-- TODO: replace "coming soon" with the tutorial link once it is published. -->
 
 
 
@@ -54,19 +53,18 @@ A few examples of what you'd actually type:
 
 > "Give me a voiceover for this script in a deep, warm, cinematic voice."
 
-<p align="center">
-  <img src="https://placehold.co/760x160?text=Word-synced+captions+example" alt="Placeholder: a video frame showing word-synced AI voiceover captions" width="90%">
-</p>
+## The four pages
 
-## The three pages
-
-![QuickCut's companion app — Videos page, showing project folders, drop-folder notes, and approved exports](docs/images/app-snapshot.png)
+![QuickCut's companion app — Videos page, showing finished videos with Show in Finder, Download and Copy path](docs/images/app-snapshot.png)
 
 The companion app is a **read-only window** into your projects — it never edits, renders, or uploads anything itself. Everything happens in conversation with your AI app; the app just shows you where things stand.
 
-- **Videos:** the drop folder, your finished videos, and every project with its drafts, source and approval state.
-- **Workspace:** watch drafts at their real size and shape, and copy feedback or approval straight into your AI app.
-- **Setup & preferences:** what's installed, your editing style, the asset library, and the one thing you *can* change here directly — connecting ElevenLabs, so your API key never passes through the chat.
+- **Videos:** your finished videos ready to play, every project with its approval status, and a map of where everything lives on your Mac.
+- **Workspace:** watch drafts at their real size and shape, see your feedback grouped by draft, get a reminder when the newest draft isn't approved yet, and copy feedback or approval straight into your AI app.
+- **Brand:** your colours, fonts, caption and card samples, read straight from your editing guide. To change them, tell your AI app.
+- **Setup & preferences:** what's installed, how to keep QuickCut up to date, your editing style, the asset library by topic, and connecting ElevenLabs — so your API key never passes through the chat.
+
+The app only ever does two things itself: connect ElevenLabs, and **Show in Finder**, which opens a Finder window on a file inside `workspace/` and changes nothing.
 
 ## Enjoying QuickCut?
 
