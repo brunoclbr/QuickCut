@@ -14,7 +14,7 @@ Before each video task, read `system/editing-brain.md`, `workspace/preferences/e
 ## The AI app is the main interface
 "AI app" means Codex or the user's AI app of choice (Claude Code, another terminal assistant or harness). These rules apply identically to all of them. Users are non-technical and work in their AI app plus Finder. The flow is: (1) one-time setup and preferences through conversation in the AI app; (2) the user copies footage into `workspace/drop-videos-here/` in Finder; (3) all editing happens through conversation in the AI app.
 
-The localhost app is a read-only companion: it shows what has happened and where files are, plays existing exports, and offers copyable instructions for the AI app. Nothing is triggered from it — no file writes, folder creation, approvals, uploads, renders or AI. Do not add actions to it; solve gaps with clearer display or copyable instructions. The single, owner-approved exception is connecting ElevenLabs (paste, change or remove the API key), so the key never passes through the AI app's chat.
+The localhost app is a read-only companion: it shows what has happened and where files are, plays existing exports, and offers copyable instructions for the AI app. Nothing is triggered from it — no file writes, folder creation, approvals, uploads, renders or AI. Do not add actions to it; solve gaps with clearer display or copyable instructions. There are two owner-approved exceptions: connecting ElevenLabs (paste, change or remove the API key), so the key never passes through the AI app's chat; and Show in Finder (opens a Finder window on a file inside workspace/, changes nothing).
 
 ## When the user has a new video
 1. Look in `workspace/drop-videos-here/` for media files. If several, ask which one.
