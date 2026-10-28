@@ -311,16 +311,16 @@ function videoTable(shown, redraw) {
   return el('div', { className: 'table-wrap' }, el('table', { className: 'vtable' }, el('thead', {}, el('tr', {}, el('th', {}), th('name', 'Video'), th('status', 'Status'), el('th', {}, 'Draft'), el('th', {}, 'Formats'), th('size', 'Disk use'), th('updated', 'Updated'), el('th', {}))), el('tbody', {}, body)));
 }
 const newVideoInProjectText = group => `${readRules}\nI want a new video in the project "${group.title}" (workspace/projects/${group.name}/). Follow "When the user has a new video" in AGENTS.md: ask me for the footage if it is not in the drop folder, suggest a video name, write plan.md and open the plan page for me.`;
-// Collapsed projects on the Overview are remembered in this browser.
-const collapsedKey = () => `collapsed:${state.root}`;
-function collapsedProjects() { try { return new Set(JSON.parse(storageGet(collapsedKey()) || '[]')); } catch { return new Set(); } }
+// Projects on the Overview start collapsed; the ones opened are remembered in this browser. A search shows its matches.
+const expandedKey = () => `expanded:${state.root}`;
+function expandedProjects() { try { return new Set(JSON.parse(storageGet(expandedKey()) || '[]')); } catch { return new Set(); } }
 function projectSection(group, list, redraw) {
   const key = group.name || '_other';
-  let collapsed = collapsedProjects().has(key);
+  let collapsed = !(expandedProjects().has(key) || (videoQuery.trim() && list.length));
   const body = el('div', { className: 'pgroup-body' }, list.length ? (listMode === 'table' ? videoTable(list, redraw) : el('div', { className: 'vlist' }, list.map(videoRow))) : el('p', { className: 'muted', style: 'margin:0' }, 'No videos in this project yet.'));
   const toggle = el('button', { className: 'pgroup-toggle ghost', 'aria-expanded': String(!collapsed), 'aria-label': `${collapsed ? 'Show' : 'Hide'} the videos in ${group.title}`, title: 'Show or hide the videos' }, svgIcon('<path d="m9 6 6 6-6 6"/>'));
   const sync = () => { body.hidden = collapsed; toggle.setAttribute('aria-expanded', String(!collapsed)); toggle.setAttribute('aria-label', `${collapsed ? 'Show' : 'Hide'} the videos in ${group.title}`); toggle.classList.toggle('open', !collapsed); };
-  toggle.addEventListener('click', () => { collapsed = !collapsed; const set = collapsedProjects(); if (collapsed) set.add(key); else set.delete(key); storageSet(collapsedKey(), JSON.stringify([...set])); sync(); });
+  toggle.addEventListener('click', () => { collapsed = !collapsed; const set = expandedProjects(); if (collapsed) set.delete(key); else set.add(key); storageSet(expandedKey(), JSON.stringify([...set])); sync(); });
   sync();
   return el('section', { className: 'pgroup' },
     el('div', { className: 'pgroup-head' }, toggle, el('div', { className: 'pgroup-title' }, el('h2', {}, group.name ? el('a', { href: `#project/${encodeURIComponent(group.name)}` }, group.title) : group.title), group.about && el('p', { className: 'muted' }, group.about)), el('span', { className: 'muted nowrap' }, `${list.length} video${list.length === 1 ? '' : 's'}`)),
