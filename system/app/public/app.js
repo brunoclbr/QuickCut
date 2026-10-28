@@ -1,7 +1,7 @@
 const $ = selector => document.querySelector(selector);
 const main = $('#main');
-const TABS = { videos: '01 / Videos', workspace: '02 / Workspace', brand: '03 / Brand', setup: '04 / Setup & preferences' };
-let state, tab = 'videos', currentProject, selectedDraft, statusTimer;
+const TABS = { overview: 'Overview', brand: 'Brand', setup: 'Setup & preferences' };
+let state, selectedDraft, statusTimer, lastVideo;
 const choices = new Map();
 const tools = { checked: false, result: null, error: null };
 const voice = { editing: false, confirmDisconnect: false, busy: false, error: null };
@@ -54,8 +54,8 @@ function copyBlock(text, buttonLabel, note) {
   return el('div', { className: 'stack' }, el('div', { className: 'row' }, el('button', { className: 'primary', onClick: () => copy(text) }, buttonLabel), note && el('span', { className: 'muted' }, note)), el('details', {}, el('summary', { className: 'muted' }, 'Preview'), el('pre', { className: 'preview' }, text)));
 }
 
-const readRules = 'Read AGENTS.md, system/editing-brain.md, workspace/preferences/editing-guide.md, workspace/preferences/editing-rules.md, workspace/assets/asset-index.md and system/setup/setup-notes.md. Reuse saved preferences; ask only about missing material decisions or conflicts. Preserve originals, real voice, meaning and appearance. Never silently substitute assets or convert HDR to SDR.';
-const updateText = 'Update QuickCut to the latest version from GitHub with git pull. First run git status and tell me about any local changes; never discard, overwrite or move anything in workspace/ (my videos, preferences and assets). If the pull would conflict, stop and explain. Afterwards tell me in plain words what changed, and run npm --prefix system/app test.';
+const readRules = 'Follow AGENTS.md: read the files it lists first, reuse my saved preferences, ask only about missing decisions, and never overwrite originals or approved versions.';
+const updateText = 'Update this video editing app to the latest version from GitHub with git pull. First run git status and tell me about any local changes; never discard, overwrite or move anything in workspace/ (my videos, preferences and assets). If the pull would conflict, stop and explain. Afterwards tell me in plain words what changed, and run npm --prefix system/app test.';
 const studioText = 'Open the editor app (HyperFrames Studio) on my current video. Before you rebuild anything afterwards, back up what I changed there, carry my edits into your build script and tell me what you kept.';
 const polishTemplate = project => `Turn my rough notes below into a precise editing brief for my AI video editor.\nKeep it surgical: for each change give the timestamp, what to change, what must stay exactly the same, and how to check it is right. Order by priority. Do not invent new ideas or redesign anything I did not mention. End with a short "Do not change" list.\nProject: ${project?.name || '<project>'}${project?.drafts.at(-1) ? `, current draft: ${project.drafts.at(-1).name}` : ''}.\n\nMy notes:\n[paste your notes here]`;
 const closeNotesText = (project, draft) => `In ${project.folder}/feedback.md, the review notes up to and including ${draft ? stem(draft.name) : 'the current draft'} are settled: they are done and must not be carried forward or re-applied unless I mention them again. Add a short "## Settled up to ${draft ? stem(draft.name) : 'the current draft'}" section saying exactly that, then confirm which earlier notes you will no longer apply.`;
@@ -157,99 +157,287 @@ function docSwitcher(files) {
 }
 
 function newVideoPrompt(file) {
-  return `${readRules}\nI put a new video in ${state.dropFolder}/: ${file.name}. Start a new video project for it. Suggest a short project name and confirm it with me, then create workspace/videos/<name>/ with brief.md, feedback.md, source/, drafts/ and work/, and move the file unchanged into source/ (move, do not copy or re-encode). Leave a note in the drop folder saying where it went. Do not overwrite existing projects. Ask only for missing video-specific decisions. When inputs are ready, create a numbered playable 15-second opening and wait for my review before extending it. No publishing.`;
+  return `${readRules}\nI put a new video in ${state.dropFolder}/: ${file.name}. Follow "When the user has a new video" in AGENTS.md: suggest the project (an existing one or a new one) and a video name and confirm them with me, move the file unchanged into workspace/projects/<project>/<video>/source/, then write plan.md ("this is what I have in mind") and open the plan page for me before you start. Do not overwrite existing videos. No publishing.`;
 }
 function sourceStatus(project) {
   if (!project.sourceExists) return 'No source folder';
   return project.source.length ? `${project.source.length} file${project.source.length === 1 ? '' : 's'}` : 'Empty';
 }
-function openProject(name) { currentProject = name; selectedDraft = null; navigate('workspace'); }
+// Routes (location.hash): overview | project/<p> | video/<p>/<v> | plan/<p>/<v> | brand | setup
+let route = { name: 'overview' };
+const openGroups = new Set();
+function parseHash() {
+  const [name, a, b] = location.hash.slice(1).split('/').map(part => { try { return decodeURIComponent(part); } catch { return part; } });
+  route = name === 'video' && a && b ? { name, project: a, video: b } : name === 'plan' && a && b ? { name, project: a, video: b } : name === 'project' && a ? { name, project: a } : name === 'brand' || name === 'setup' ? { name } : { name: 'overview' };
+}
+const goto = path => { const next = `#${path}`; if (location.hash === next) render(); else location.hash = next; };
+const videoPath = (kind, v) => `${kind}/${encodeURIComponent(v.project)}/${encodeURIComponent(v.name)}`;
+const openVideo = v => { selectedDraft = null; goto(videoPath('video', v)); };
+const openPlan = v => goto(videoPath('plan', v));
+const openProjectPage = g => goto(`project/${encodeURIComponent(g.name)}`);
+const currentVideo = () => state.videos.find(v => v.project === route.project && v.name === route.video);
+const currentGroup = () => state.projects.find(g => g.name === route.project);
+const videoStatus = v => v.approved || finalsFor(v).length ? 'finished' : v.drafts.length ? 'review' : 'raw';
 
 function folderRow(icon, name, relative, what, extra) {
   return el('div', { className: 'frow' }, svgIcon(icons[icon]), el('div', {}, el('span', { className: 'name' }, name), what && el('p', { className: 'what' }, what)), el('span', { className: 'where mono', title: fullPath(relative) }, `…/${relative}/`), el('div', { className: 'row' }, extra, revealButton(relative), copyPathButton(relative)));
 }
 // The newest numbered draft (draft-NN…, most recently written); calibration samples and other files don't count.
 const latestDraft = project => { const numbered = project.drafts.filter(d => /^draft-\d+/i.test(d.name)); return (numbered.length ? numbered : project.drafts).slice().sort((a, b) => a.modified.localeCompare(b.modified)).at(-1); };
+// "Dismiss" hides the not-approved reminder for one draft (kept in this browser only; a newer draft brings the reminder back).
+const dismissedKey = () => `dismissed:${state.root}`;
+function dismissedDrafts() { try { return JSON.parse(storageGet(dismissedKey()) || '{}'); } catch { return {}; } }
+const isDismissed = (project, draft) => Boolean(draft) && dismissedDrafts()[project.name] === draft.path;
+function dismissDraft(project, draft) { storageSet(dismissedKey(), JSON.stringify({ ...dismissedDrafts(), [project.name]: draft.path })); render(); }
 const needsApproval = project => Boolean(latestDraft(project)) && latestDraft(project).path !== project.approved;
+// Approve: really approves (the companion's third owner-approved write, 2026-10-28): the approval record in feedback.md,
+// the finished copy and the poster. Two clicks, because it replaces that version's previous finished copy.
+function approveControls(project, draft, { dismissible = false } = {}) {
+  const finals = finalsFor(project), hasVariants = finals.some(f => f.version), isYoutube = /youtube/i.test(draft.name);
+  const options = (hasVariants || isYoutube) ? Object.entries(VERSION_LABEL).filter(([id]) => id || !hasVariants) : [['', VERSION_LABEL['']]];
+  const guess = isYoutube ? 'youtube' : finals.find(f => f.version && f.version !== 'youtube')?.version ?? '';
+  const box = el('div', { className: 'approve' });
+  let confirming = false, busy = false, version = options.some(([id]) => id === guess) ? guess : options[0][0];
+  const target = () => `${project.name}${version ? `-${version}` : ''}.mp4`;
+  const run = async () => {
+    busy = true; draw();
+    try { const result = await post('/api/approve', { project: project.project, video: project.name, draft: draft.path.slice(project.folder.length + 1), version }); message(`Approved. Copied to Finished videos as ${result.finished.split('/').at(-1)}.`); await reloadState(); }
+    catch (error) { busy = false; confirming = false; draw(); message(`Could not approve: ${error.message}`, true); }
+  };
+  const draw = () => {
+    const pick = options.length > 1 && el('label', { className: 'field inline' }, el('span', {}, 'This is the'), el('select', { onChange: e => { version = e.target.value; draw(); }, disabled: busy }, options.map(([id, label]) => el('option', { value: id, selected: id === version }, label))), el('span', {}, 'version'));
+    box.replaceChildren(
+      confirming ? el('div', { className: 'confirm' }, el('p', {}, el('strong', {}, `I watched all of ${draftTitle(draft.name)} with sound. `), `Approve it and copy it to Finished videos as ${target()}?`, finals.some(f => f.version === version) ? ' This replaces the current finished file of that version.' : ''),
+          el('div', { className: 'row' }, el('button', { className: 'primary', disabled: busy, onClick: run }, busy ? 'Approving…' : 'Yes, approve'), el('button', { className: 'ghost', disabled: busy, onClick: () => { confirming = false; draw(); } }, 'Cancel')))
+        : el('div', { className: 'row' }, pick, el('button', { className: 'primary', onClick: () => { confirming = true; draw(); } }, `Approve ${draftTitle(draft.name).split(' · ')[0]}`), dismissible && el('button', { className: 'ghost', title: 'Hide this reminder. It comes back if a newer draft appears.', onClick: () => dismissDraft(project, draft) }, 'Dismiss'),
+          el('button', { className: 'ghost', title: 'Copy an instruction instead and paste it in your AI app', onClick: () => copy(approvalTextFor(project, draft)) }, 'Copy instruction instead')));
+  };
+  draw(); return box;
+}
 function sayRow(say, what, text) { return el('div', { className: 'say' }, el('div', {}, el('strong', {}, `“${say}”`), el('p', { className: 'muted' }, what)), text && el('button', { className: 'ghost', onClick: () => copy(text) }, 'Copy instruction')); }
-function videosView() {
-  main.append(head('Your videos', 'Everything here is a file on your Mac. Your AI app makes and changes them; this page shows what exists and where it is.'));
-
-  // 1. Finished videos: the results, first.
-  const done = el('div', { className: 'block' }, el('span', { className: 'label' }, `Finished videos · ${state.finishedVideos.length}`));
-  if (!state.finishedVideos.length) done.append(el('div', { className: 'panel empty' }, 'Nothing finished yet. When you approve a draft, your AI app copies it here.'));
-  else done.append(el('div', { className: 'finished-grid' }, state.finishedVideos.map(f => {
-    const project = state.projects.find(p => p.name === stem(f.name));
-    return el('div', { className: 'fcard' },
-      el('video', { controls: true, playsInline: true, preload: 'metadata', src: mediaURL(f.path) }),
-      el('div', { className: 'fbody' },
-        el('h2', {}, stem(f.name)),
-        el('p', { className: 'muted' }, `${sizeLabel(f.bytes)} · ${dateLabel(f.modified)}${project?.approved ? ` · approved ${stem(project.approved.split('/').at(-1))}` : ''}`),
-        el('div', { className: 'row' }, revealButton(f.path), el('a', { className: 'btn', href: mediaURL(f.path), download: f.name }, 'Download'), copyPathButton(f.path))));
-  })));
-  main.append(done);
-
-  // 2. Projects.
-  const block = el('div', { className: 'block' }, el('span', { className: 'label' }, `Projects · ${state.projects.length}`));
-  if (!state.projects.length) block.append(el('div', { className: 'panel empty' }, 'No projects yet. Tell your AI app about a new video (see “Where things are” below).'));
-  else {
-    const grid = el('div', { className: 'project-grid' });
-    state.projects.forEach((project, i) => {
-      const latest = latestDraft(project);
-      const updated = [...project.drafts, ...project.source].map(f => f.modified).sort().at(-1);
-      grid.append(el('button', { className: 'project', onClick: () => openProject(project.name), 'aria-label': `Open ${project.name}` },
-        el('div', { className: 'row between' }, el('span', { className: 'mono muted' }, pad(i + 1)), needsApproval(project) ? el('span', { className: 'tag on' }, project.approved ? 'Newer draft not approved' : 'Not approved yet') : el('span', { className: 'tag ok' }, 'Approved')),
-        el('h2', {}, project.name),
-        el('div', { className: 'stats' },
-          el('div', { className: 'stat' }, el('span', { className: 'label' }, 'Drafts'), el('b', {}, String(project.drafts.length))),
-          el('div', { className: 'stat' }, el('span', { className: 'label' }, 'Source'), el('b', {}, sourceStatus(project))),
-          el('div', { className: 'stat' }, el('span', { className: 'label' }, 'Latest'), el('b', { className: 'mono', title: latest?.name || '' }, latest ? stem(latest.name) : '—')),
-          el('div', { className: 'stat' }, el('span', { className: 'label' }, 'Updated'), el('b', {}, dateLabel(updated) || '—'))),
-        el('span', { className: 'open' }, 'Open workspace →')));
-    });
-    block.append(grid);
-  }
-  main.append(block);
-
-  // 3. Where things are (a map, not a to-do list).
+// ---- Videos page: one row per video, found by name; grouped by what needs you ----
+const VERSION_LABEL = { '': 'Final', vertical: 'Vertical 9:16', square: 'Square 1:1', youtube: 'YouTube 16:9' };
+const escapeRe = text => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+// Finished files that belong to a video: <name>.mp4, <name>-vertical.mp4, <name>-square.mp4, <name>-youtube.mp4.
+const finalSource = (project, f) => project?.drafts.find(d => d.bytes === f.bytes);
+const finalsFor = video => state.finishedVideos.filter(f => f.project === video.project).map(f => { const m = new RegExp(`^${escapeRe(video.name)}(?:-(vertical|square|youtube))?$`).exec(stem(f.name)); return m ? { ...f, version: m[1] || '' } : null; }).filter(Boolean).sort((a, b) => Object.keys(VERSION_LABEL).indexOf(a.version) - Object.keys(VERSION_LABEL).indexOf(b.version));
+// "draft-04-hard-cuts-ends-on-investors-hdr.mp4" -> "Draft 04 · Hard cuts ends on investors"
+const draftTitle = name => { const m = /^draft-(\d+)[-_ ]?(.*)$/i.exec(stem(name)); if (!m) return stem(name); const words = m[2].replace(/-hdr$/i, '').replace(/[-_]+/g, ' ').trim(); return `Draft ${pad(Number(m[1]))}${words ? ` · ${words.charAt(0).toUpperCase()}${words.slice(1)}` : ''}`; };
+const draftNumber = name => /^draft-(\d+)/i.exec(stem(name))?.[1];
+function videoEntries() {
+  const claimed = new Set();
+  const entries = state.videos.map(project => {
+    const finals = finalsFor(project); finals.forEach(f => claimed.add(f.path));
+    const status = project.approved || finals.length ? 'finished' : project.drafts.length ? 'review' : 'raw';
+    const touched = [...finals, ...project.drafts, ...project.source].map(f => f.modified).sort().at(-1) || '';
+    return { name: project.name, project, finals, status, touched };
+  });
+  // finished files that match no project folder still get a row, so nothing is lost
+  for (const f of state.finishedVideos.filter(f => !claimed.has(f.path))) entries.push({ name: stem(f.name), project: null, finals: [{ ...f, version: '' }], status: 'finished', touched: f.modified });
+  return entries.sort((a, b) => b.touched.localeCompare(a.touched));
+}
+function videoRow(v) {
+  const { project, finals } = v;
+  const latest = project && latestDraft(project);
+  const approvedDraftFile = project?.drafts.find(d => d.path === project.approved);
+  const open = () => project && openVideo(project);
+  const thumbSource = finals[0]?.path || approvedDraftFile?.path || latest?.path;
+  const thumb = project?.poster ? el('img', { className: 'vthumb', src: mediaURL(project.poster), alt: '', loading: 'lazy', onClick: open }) : thumbSource ? el('video', { className: 'vthumb', muted: true, playsInline: true, preload: 'metadata', src: `${mediaURL(thumbSource)}#t=0.6`, 'aria-hidden': 'true', onClick: open }) : el('div', { className: 'vthumb empty' });
+  const newer = project && v.status === 'finished' && latest && latest.path !== project.approved && !isDismissed(project, latest);
+  const tag = v.status === 'finished' ? el('span', { className: 'tag ok' }, 'Finished') : v.status === 'review' ? el('span', { className: 'tag on' }, 'Waiting for your review') : el('span', { className: 'tag' }, 'Raw footage');
+  const line = v.status === 'finished'
+    ? `${finals.length > 1 ? `${finals.length} versions` : approvedDraftFile ? `Approved: ${draftTitle(approvedDraftFile.name)}` : 'Finished video'}${project?.approvedOn ? ` · last approved ${project.approvedOn}` : ''}`
+    : v.status === 'review' ? `Latest: ${draftTitle(latest.name)} · ${dateLabel(latest.modified)}` : `${project.source.length ? `${project.source.length} source file${project.source.length === 1 ? '' : 's'}` : 'No source footage yet'} · no drafts yet`;
+  const versions = finals.length ? el('div', { className: 'vers' }, finals.map(f => el('div', { className: 'ver' }, el('span', { className: 'vlabel' }, VERSION_LABEL[f.version]), el('span', { className: 'muted' }, `${sizeLabel(f.bytes)} · ${dateLabel(f.modified)}`), revealButton(f.path, 'Show in Finder')))) : null;
+  const revealTarget = latest?.path || approvedDraftFile?.path;
+  return el('article', { className: 'vrow' }, thumb,
+    el('div', { className: 'vbody' },
+      el('div', { className: 'row' }, project ? el('button', { className: 'vname', onClick: open }, v.name) : el('h2', {}, v.name), tag, newer && el('span', { className: 'tag warn' }, `Newer draft ${draftNumber(latest.name) || ''} not approved`.replace('  ', ' '))),
+      el('p', { className: 'muted vline' }, line), versions),
+    el('div', { className: 'vactions' }, project && el('button', { className: v.status === 'review' ? 'primary' : '', onClick: open }, v.status === 'review' ? 'Review drafts' : 'Open video'), revealTarget && revealButton(revealTarget, 'Show drafts in Finder')));
+}
+let videoQuery = '', videoFilter = 'all', listMode = storageGet('videoView') === 'cards' ? 'cards' : 'table', videoSort = { key: 'status', dir: 1 };
+const STATUS_ORDER = { review: 0, finished: 1, raw: 2 };
+const STATUS_LABEL = { review: 'Waiting for your review', finished: 'Finished', raw: 'Raw footage' };
+const wsName = () => state.workspace?.name || null;
+const nameWorkspaceText = 'Set up the name of this workspace: ask me what to call it (my brand or my client), save it in workspace/preferences/workspace.md and remind me that one brand or client = one copy of this folder.';
+const cleanCopyText = name => `Make a clean copy of this workspace for <new brand or client name>: follow "Workspace identity" in AGENTS.md. Ask me where to put it, copy only the tools (system/) and an empty workspace, never touch or copy my videos here${name ? ` (this workspace is "${name}")` : ''}, and tell me how to open the new folder.`;
+const copyReminder = 'One brand or client = one copy of this folder. Don’t mix brands in one folder: preferences, fonts, assets and finished videos would blend. For a new brand or client, make a copy of the original (in Finder, or ask your AI app for a clean copy) and set it up there.';
+function statusTag(v, short = false) {
+  const planned = v.status === 'raw' && v.project?.plan;
+  return el('span', { className: `tag ${v.status === 'finished' ? 'ok' : v.status === 'review' || planned ? 'on' : ''}` }, planned ? 'Plan ready' : short && v.status === 'review' ? 'Needs review' : STATUS_LABEL[v.status]);
+}
+function nameWorkspaceCard() {
+  return el('div', { className: 'nudge', role: 'note' },
+    el('div', {}, el('strong', {}, 'Name this workspace.'), el('span', {}, ' It is not named yet. Ask your AI app: what is this workspace for, your brand or your client? '), el('span', {}, copyReminder)),
+    el('button', { className: 'primary', onClick: () => copy(nameWorkspaceText) }, 'Copy instruction'));
+}
+function newFootageBanner() {
+  if (!state.newVideos.length) return null;
+  return el('div', { className: 'nudge', role: 'note' },
+    el('div', {}, el('strong', {}, `${state.newVideos.length} new video${state.newVideos.length === 1 ? '' : 's'} waiting in the drop folder.`), el('span', {}, ` ${state.newVideos.map(f => `${f.name} (${sizeLabel(f.bytes)})`).join(', ')}. Your AI app will suggest a name and move it into its own project.`)),
+    el('div', { className: 'row' }, state.newVideos.length === 1 ? el('button', { className: 'primary', onClick: () => copy(newVideoPrompt(state.newVideos[0])) }, 'Copy start instruction') : el('button', { className: 'primary', onClick: () => copy(`${readRules}\nI put new videos in ${state.dropFolder}/. Ask me which one to start with.`) }, 'Copy start instruction'), revealButton(state.dropFolder, 'Show drop folder')));
+}
+function summaryStrip(entries) {
+  const count = status => entries.filter(v => v.status === status).length;
+  const total = entries.reduce((sum, v) => sum + (v.project?.bytes || 0), 0);
+  const last = entries.map(v => v.touched).sort().at(-1);
+  const cell = (label, value, hint) => el('div', { className: 'sum' }, el('b', {}, value), el('span', { className: 'label' }, label), hint && el('span', { className: 'muted sum-hint' }, hint));
+  return el('div', { className: 'summary' }, cell('Videos', String(entries.length)), cell('Waiting for review', String(count('review'))), cell('Finished', String(count('finished'))), cell('Raw footage', String(count('raw'))), cell('Last activity', dateLabel(last) || '—'), cell('On disk', total ? sizeLabel(total) : '—', 'all projects'));
+}
+const sortValue = { name: v => v.name.toLowerCase(), status: v => STATUS_ORDER[v.status], updated: v => v.touched, size: v => v.project?.bytes || 0 };
+function sortEntries(list) {
+  const { key, dir } = videoSort;
+  return list.slice().sort((a, b) => { const x = sortValue[key](a), y = sortValue[key](b); const c = x < y ? -1 : x > y ? 1 : 0; return (c || b.touched.localeCompare(a.touched) || a.name.localeCompare(b.name)) * (c ? dir : 1) || 0; });
+}
+const VERSION_SHORT = { '': 'Final', vertical: 'Vertical', square: 'Square', youtube: 'YouTube' };
+const shortDate = iso => { if (!iso) return '—'; const d = new Date(iso); return d.toLocaleDateString(undefined, d.getFullYear() === new Date().getFullYear() ? { month: 'short', day: 'numeric' } : { month: 'short', day: 'numeric', year: 'numeric' }); };
+function videoTable(shown, redraw) {
+  const th = (key, label) => el('th', { 'aria-sort': videoSort.key === key ? (videoSort.dir === 1 ? 'ascending' : 'descending') : 'none' }, el('button', { className: 'thbtn', onClick: () => { videoSort = videoSort.key === key ? { key, dir: -videoSort.dir } : { key, dir: key === 'updated' || key === 'size' ? -1 : 1 }; redraw(); } }, label, videoSort.key === key ? (videoSort.dir === 1 ? ' ↑' : ' ↓') : ''));
+  const body = sortEntries(shown).map(v => {
+    const { project, finals } = v; const latest = project && latestDraft(project); const approvedFile = project?.drafts.find(d => d.path === project.approved);
+    const open = () => project && openVideo(project);
+    const newer = project && v.status === 'finished' && latest && latest.path !== project.approved && !isDismissed(project, latest);
+    const draftCell = v.status === 'finished' ? (approvedFile ? `✓ ${draftTitle(approvedFile.name)}` : 'Finished video') : v.status === 'review' ? `${draftTitle(latest.name)} (not approved)` : 'No drafts yet';
+    const target = finals[0]?.path || latest?.path;
+    return el('tr', {},
+      el('td', { className: 'tcell-thumb' }, project?.poster ? el('img', { className: 'tthumb', src: mediaURL(project.poster), alt: '', loading: 'lazy', onClick: open }) : el('div', { className: 'tthumb empty' })),
+      el('td', {}, project ? el('button', { className: 'vname small', onClick: open }, v.name) : el('strong', {}, v.name), newer && el('div', {}, el('span', { className: 'tag warn' }, `Newer draft ${draftNumber(latest.name) || ''} not approved`.replace('  ', ' ')))),
+      el('td', {}, statusTag(v, true)), el('td', { className: 'tdraft' }, draftCell),
+      el('td', { className: 'muted' }, finals.length ? finals.map(f => VERSION_SHORT[f.version]).join(' · ') : '—'),
+      el('td', { className: 'muted nowrap' }, project?.bytes ? sizeLabel(project.bytes) : '—'), el('td', { className: 'muted nowrap' }, shortDate(v.touched)),
+      el('td', {}, el('div', { className: 'row' }, project && (v.status === 'raw' && project.plan ? el('button', { className: 'primary', onClick: () => openPlan(project) }, 'View plan') : el('button', { className: v.status === 'review' ? 'primary' : '', onClick: open }, v.status === 'review' ? 'Watch & approve' : 'Open')), target && revealButton(target, finals.length ? 'Show video' : 'Show draft'))));
+  });
+  return el('div', { className: 'table-wrap' }, el('table', { className: 'vtable' }, el('thead', {}, el('tr', {}, el('th', {}), th('name', 'Video'), th('status', 'Status'), el('th', {}, 'Draft'), el('th', {}, 'Formats'), th('size', 'Disk use'), th('updated', 'Updated'), el('th', {}))), el('tbody', {}, body)));
+}
+const newVideoInProjectText = group => `${readRules}\nI want a new video in the project "${group.title}" (workspace/projects/${group.name}/). Follow "When the user has a new video" in AGENTS.md: ask me for the footage if it is not in the drop folder, suggest a video name, write plan.md and open the plan page for me.`;
+// Collapsed projects on the Overview are remembered in this browser.
+const collapsedKey = () => `collapsed:${state.root}`;
+function collapsedProjects() { try { return new Set(JSON.parse(storageGet(collapsedKey()) || '[]')); } catch { return new Set(); } }
+function projectSection(group, list, redraw) {
+  const key = group.name || '_other';
+  let collapsed = collapsedProjects().has(key);
+  const body = el('div', { className: 'pgroup-body' }, list.length ? (listMode === 'table' ? videoTable(list, redraw) : el('div', { className: 'vlist' }, list.map(videoRow))) : el('p', { className: 'muted', style: 'margin:0' }, 'No videos in this project yet.'));
+  const toggle = el('button', { className: 'pgroup-toggle ghost', 'aria-expanded': String(!collapsed), 'aria-label': `${collapsed ? 'Show' : 'Hide'} the videos in ${group.title}`, title: 'Show or hide the videos' }, svgIcon('<path d="m9 6 6 6-6 6"/>'));
+  const sync = () => { body.hidden = collapsed; toggle.setAttribute('aria-expanded', String(!collapsed)); toggle.setAttribute('aria-label', `${collapsed ? 'Show' : 'Hide'} the videos in ${group.title}`); toggle.classList.toggle('open', !collapsed); };
+  toggle.addEventListener('click', () => { collapsed = !collapsed; const set = collapsedProjects(); if (collapsed) set.add(key); else set.delete(key); storageSet(collapsedKey(), JSON.stringify([...set])); sync(); });
+  sync();
+  return el('section', { className: 'pgroup' },
+    el('div', { className: 'pgroup-head' }, toggle, el('div', { className: 'pgroup-title' }, el('h2', {}, group.name ? el('a', { href: `#project/${encodeURIComponent(group.name)}` }, group.title) : group.title), group.about && el('p', { className: 'muted' }, group.about)), el('span', { className: 'muted nowrap' }, `${list.length} video${list.length === 1 ? '' : 's'}`)),
+    body);
+}
+function listTools(entries, draw) {
+  const chips = el('div', { className: 'chips', role: 'group', 'aria-label': 'Filter videos' });
+  const drawChips = () => chips.replaceChildren(...[['all', 'All', entries.length], ['review', 'Needs review', entries.filter(v => v.status === 'review').length], ['finished', 'Finished', entries.filter(v => v.status === 'finished').length], ['raw', 'Not edited', entries.filter(v => v.status === 'raw').length]].map(([id, label, n]) => el('button', { className: id === videoFilter ? 'primary' : 'ghost', 'aria-pressed': String(id === videoFilter), onClick: () => { videoFilter = id; drawChips(); draw(); } }, `${label} · ${n}`)));
+  const modes = el('div', { className: 'chips', role: 'group', 'aria-label': 'View' });
+  const drawModes = () => modes.replaceChildren(...[['table', 'Table'], ['cards', 'Cards']].map(([id, label]) => el('button', { className: id === listMode ? 'primary' : 'ghost', 'aria-pressed': String(id === listMode), onClick: () => { listMode = id; storageSet('videoView', id); drawModes(); draw(); } }, label)));
+  drawChips(); drawModes();
+  const search = el('input', { type: 'search', className: 'vsearch', placeholder: 'Find a video by name…', 'aria-label': 'Find a video by name', value: videoQuery, onInput: e => { videoQuery = e.target.value; draw(); } });
+  return el('div', { className: 'vtools' }, search, chips, modes);
+}
+function overviewView() {
+  main.append(head('Overview', 'Your projects and the videos inside them. Your AI app makes and changes them; this page shows what exists and where it is.'));
+  if (!wsName()) main.append(nameWorkspaceCard());
+  const banner = newFootageBanner(); if (banner) main.append(banner);
+  const entries = videoEntries();
+  const waiting = entries.filter(v => v.status === 'review');
+  main.append(waiting.length
+    ? el('p', { className: 'attention' }, el('strong', {}, waiting.length === 1 ? '1 video is waiting for your review: ' : `${waiting.length} videos are waiting for your review: `), waiting.map(v => `${v.name} (${draftTitle(latestDraft(v.project).name).split(' · ')[0]})`).join(', '), '.')
+    : el('p', { className: 'attention ok' }, 'Nothing is waiting for your review.'));
+  main.append(summaryStrip(entries));
+  const listBox = el('div', { className: 'plist' });
+  const draw = () => {
+    const shown = entries.filter(v => (videoFilter === 'all' || v.status === videoFilter) && v.name.toLowerCase().includes(videoQuery.trim().toLowerCase()));
+    const filtering = videoFilter !== 'all' || videoQuery.trim();
+    const sections = state.projects.map(group => [group, shown.filter(v => v.project?.project === group.name)]).filter(([, list]) => list.length || !filtering).map(([group, list]) => projectSection(group, list, draw));
+    const loose = shown.filter(v => !v.project);
+    if (loose.length) sections.push(projectSection({ name: '', title: 'Other finished videos', about: 'Finished files that are not inside a project folder.' }, loose, draw));
+    listBox.replaceChildren(...(sections.length ? sections : [el('div', { className: 'panel empty' }, entries.length || state.projects.length ? 'No video matches. Clear the search or pick “All”.' : 'No projects yet. Tell your AI app about a new video and it creates the project, the video and a plan for you to check.')]));
+  };
+  draw();
+  main.append(listTools(entries, draw), listBox);
+  foldedReference();
+}
+function projectView() {
+  const group = currentGroup();
+  if (!group) { main.append(head('Project not found', 'It may have been renamed or removed.'), el('button', { className: 'ghost', onClick: () => goto('overview') }, '← Overview')); return; }
+  const entries = videoEntries().filter(v => v.project?.project === group.name);
+  const finals = state.finishedVideos.filter(f => f.project === group.name);
+  main.append(head(group.title, group.about || 'A project in this workspace.'));
+  main.append(el('div', { className: 'row', style: 'margin:-8px 0 22px' }, el('button', { className: 'primary', onClick: () => copy(newVideoInProjectText(group)) }, 'Copy: start a new video here'), revealButton(group.folder, 'Show project folder'), el('span', { className: 'muted' }, 'Paste the instruction in your AI app.')));
+  main.append(summaryStrip(entries));
+  main.append(el('section', { className: 'pgroup' }, el('div', { className: 'pgroup-head' }, el('h2', {}, 'Videos'), el('span', { className: 'muted' }, `${entries.length}`)), entries.length ? videoTable(entries, () => render()) : el('p', { className: 'muted', style: 'margin:0' }, 'No videos in this project yet.')));
+  main.append(el('section', { className: 'pgroup' }, el('div', { className: 'pgroup-head' }, el('h2', {}, 'Finished files'), el('span', { className: 'muted' }, `${finals.length}`)),
+    finals.length ? el('div', { className: 'vers' }, finals.map(f => el('div', { className: 'ver' }, el('span', { className: 'vlabel' }, VERSION_LABEL[(/-(vertical|square|youtube)\.mp4$/.exec(f.name) || [])[1] || '']), el('span', {}, f.name), el('span', { className: 'muted' }, `${sizeLabel(f.bytes)} · ${dateLabel(f.modified)}`), revealButton(f.path, 'Show in Finder'), el('a', { className: 'btn', href: mediaURL(f.path), download: f.name }, 'Download'))))
+      : el('p', { className: 'muted', style: 'margin:0' }, 'Nothing finished in this project yet. Approved videos are copied to workspace/finished-videos/' + group.name + '/.')));
+}
+// "This is what I have in mind": the plan your AI app writes (plan.md in the video's folder) before it starts, shown as a page to check.
+function planView() {
+  const video = currentVideo();
+  if (!video) { main.append(head('Video not found', 'It may have been renamed or removed.'), el('button', { className: 'ghost', onClick: () => goto('overview') }, '← Overview')); return; }
+  const box = el('article', { className: 'plan' }, el('p', { className: 'muted' }, 'Reading the plan…'));
+  main.append(box);
+  if (!video.plan) { box.replaceChildren(el('span', { className: 'eyebrow' }, 'Plan'), el('h1', {}, video.name), el('p', { className: 'lede' }, 'There is no plan for this video yet. Ask your AI app: “Write a plan for this video and open it for me.”'), el('button', { className: 'ghost', onClick: () => openVideo(video) }, 'Open the video')); return; }
+  api(`/api/document?path=${encodeURIComponent(video.plan)}`).then(({ content }) => {
+    const lines = content.replace(/\r/g, '').split('\n');
+    const title = lines.find(l => /^# /.test(l))?.slice(2).trim() || `Plan for ${video.name}`;
+    const bodyStart = lines.findIndex(l => /^## /.test(l));
+    const head = bodyStart < 0 ? lines : lines.slice(0, bodyStart);
+    const facts = head.map(l => /^([A-Z][A-Za-z ]{1,24}):[ \t]+(.+)$/.exec(l)).filter(Boolean).map(m => [m[1], m[2]]);
+    const body = bodyStart < 0 ? '' : lines.slice(bodyStart).join('\n');
+    const go = `The plan for ${video.project}/${video.name} (${video.plan}) is approved. Go ahead and start with the first draft. Follow AGENTS.md, and open the video page for me when the draft is ready.`;
+    const change = el('textarea', { rows: 3, placeholder: 'What should change? What should stay?', 'aria-label': 'What to change in the plan' });
+    box.replaceChildren(
+      el('span', { className: 'eyebrow' }, `Plan · ${currentGroup()?.title || video.project}`),
+      el('h1', {}, title),
+      el('p', { className: 'lede' }, 'This is what I have in mind. Check it, then tell your AI app to go ahead or what to change.'),
+      facts.length ? el('dl', { className: 'facts' }, facts.map(([k, v]) => el('div', {}, el('dt', {}, k), el('dd', {}, v)))) : null,
+      body ? renderMarkdown(body) : null,
+      el('div', { className: 'plan-actions' },
+        el('div', { className: 'row' }, el('button', { className: 'primary', onClick: () => copy(go, 'Copied. Paste it in your AI app to start.') }, 'Looks good, go ahead'), el('span', { className: 'muted' }, 'Copies a short message. Paste it in your AI app.')),
+        el('details', {}, el('summary', {}, 'Change something first'), el('div', { className: 'stack', style: 'margin-top:10px' }, change, el('div', { className: 'row' }, el('button', { className: 'ghost', onClick: () => copy(`${readRules}\nAbout the plan for ${video.project}/${video.name} (${video.plan}): ${change.value || '[describe the change]'}\nUpdate plan.md, keep everything I did not mention, and open the plan page again for me.`) }, 'Copy my change'))))),
+      el('div', { className: 'row', style: 'margin-top:18px' }, el('button', { className: 'ghost', onClick: () => openVideo(video) }, 'Open the video page'), revealButton(video.folder, 'Show folder in Finder')));
+  }).catch(error => box.replaceChildren(el('p', { className: 'error' }, `Could not read the plan: ${error.message}`)));
+}
+// Folders and instructions: reference material, folded away so the page stays the list.
+function foldedReference() {
   const rows = el('div', { className: 'rows' });
-  rows.append(folderRow('done', 'Finished videos', state.finishedFolder, 'Your approved results, one per project.'));
-  rows.append(folderRow('folder', 'Projects', state.projectsFolder, 'One folder per video: source/ (your original footage), drafts/ (every version, never overwritten), feedback.md (all review notes).', !state.projectsFolderExists && el('span', { className: 'tag bad' }, 'Missing')));
+  rows.append(folderRow('done', 'Finished videos', state.finishedFolder, 'One file per approved video, in a folder per project: finished-videos/<project>/<video>.mp4. A video with several versions adds -vertical (or -square) and -youtube, so they sit together.'));
+  rows.append(folderRow('folder', 'Projects', state.projectsFolder, 'One folder per project, one folder per video inside it: workspace/projects/<project>/<video>/ with source/ (your original footage), drafts/ (every version, never overwritten; voice-only WAVs in drafts/audio/), plan.md, brief.md and feedback.md.', !state.projectsFolderExists && el('span', { className: 'tag bad' }, 'Missing')));
   rows.append(folderRow('drop', 'New footage (optional)', state.dropFolder, 'Copy a new video here in Finder, or simply tell your AI app where the file is. Either works.', state.newVideos.length ? el('span', { className: 'tag on' }, `${state.newVideos.length} waiting`) : null));
-  if (state.newVideos.length) rows.append(el('div', { className: 'subrow' }, state.newVideos.map(file => el('div', { className: 'item' }, el('span', {}, el('strong', {}, file.name), el('span', { className: 'muted' }, ` · ${sizeLabel(file.bytes)}`)), el('button', { className: 'primary', onClick: () => copy(newVideoPrompt(file)) }, 'Copy start instruction')))));
-  rows.append(el('div', { className: 'frow' }, svgIcon(icons.lock), el('div', {}, el('span', { className: 'name' }, 'system/'), el('p', { className: 'what' }, 'QuickCut’s own machinery. Don’t edit, move or delete anything here; ask your AI app instead.')), el('span', { className: 'where mono', title: fullPath('system') }, '…/system/'), el('span', { className: 'tag' }, 'Don’t touch')));
-  main.append(el('div', { className: 'block' }, el('span', { className: 'label' }, 'Where things are'), el('p', { className: 'root-line' }, 'Your QuickCut folder: ', el('span', { className: 'mono' }, state.root), ' — “…” below stands for it.'), rows));
-
-  // 4. Things to say to your AI app.
-  main.append(el('div', { className: 'block' }, el('span', { className: 'label' }, 'Things you can say to your AI app'), el('div', { className: 'panel says' },
-    sayRow('Open the app', 'Opens this companion.'),
-    sayRow('Open the editor app', 'Opens HyperFrames Studio, where you can tweak a video by hand. Afterwards, tell your AI app what you changed: its next build rewrites the file, so your edits must be carried over.', studioText),
-    sayRow('Approve draft 07 of my-video', 'Records the approval and copies that draft to Finished videos. Until you do, the newest draft is not your final video.'),
-    sayRow('Update QuickCut', 'Gets the latest version of this app and its tools (git pull), without touching your videos. Worth doing every now and then.', updateText))));
+  rows.append(el('div', { className: 'frow' }, svgIcon(icons.lock), el('div', {}, el('span', { className: 'name' }, 'system/'), el('p', { className: 'what' }, 'The tools behind this app. Don’t edit, move or delete anything here; ask your AI app instead.')), el('span', { className: 'where mono', title: fullPath('system') }, '…/system/'), el('span', { className: 'tag' }, 'Don’t touch')));
+  main.append(el('div', { className: 'block' },
+    fold('Where things are in Finder', 'folder map', el('div', {}, el('p', { className: 'root-line' }, 'This workspace’s folder: ', el('span', { className: 'mono' }, state.root), ' — “…” below stands for it.'), rows)),
+    fold('Things you can say to your AI app', 'instructions', el('div', { className: 'panel says' },
+      sayRow('Open the app', 'Opens this companion.'),
+      sayRow('Start a new video', 'Your AI app suggests a project and a name, writes a plan and opens it here for you to check before it starts.', `${readRules}\nI have a new video. Follow "When the user has a new video" in AGENTS.md: find it in the drop folder, suggest a project and a name, write plan.md and open the plan page for me.`),
+      sayRow('Open the editor app', 'Opens HyperFrames Studio, where you can tweak a video by hand. Afterwards, tell your AI app what you changed: its next build rewrites the file, so your edits must be carried over.', studioText),
+      sayRow('Approve draft 07 of my-video', 'Records the approval and copies that draft to Finished videos. Until you do, the newest draft is not your final video. (You can also press Approve on the video’s page.)'),
+      sayRow('Make a clean copy of this workspace for a new brand', 'One brand or client = one copy of this folder. This makes a fresh one with the tools and an empty workspace; your videos here stay untouched.', cleanCopyText(wsName())),
+      sayRow('Update this app', 'Gets the latest version of this app and its tools (git pull), without touching your videos. Worth doing every now and then.', updateText)))));
 }
 
 function approvalTextFor(project, draft) {
   const relative = draft.path.slice(project.folder.length + 1);
-  return `I watched all of ${draft.path} with sound and approve it as the accepted version of ${project.name}. Append this to ${project.folder}/feedback.md, keeping the first two lines exactly as written:\n## Approved version\nDraft: ${relative}\nApproved by the owner on <today's date> after a full review.\nThen copy it to workspace/finished-videos/${project.name}.mp4. Do not re-render, change the video or promote anything to my reusable style.`;
+  return `I watched all of ${draft.path} with sound and approve it as the accepted version of ${project.name}. Append this to ${project.folder}/feedback.md, keeping the first two lines exactly as written:\n## Approved version\nDraft: ${relative}\nApproved by the owner on <today's date> after a full review.\nThen copy it to workspace/finished-videos/${project.project}/${project.name}.mp4 (add -vertical, -square or -youtube if the video has several versions) and make its poster.jpg. Do not re-render, change the video or promote anything to my reusable style.`;
 }
-function workspaceView() {
-  if (!state.projects.length) { main.append(head('No project yet', 'Projects appear here after your AI app starts one.'), el('div', { className: 'panel empty' }, 'Go to Videos to see the drop folder.')); return; }
-  const project = state.projects.find(p => p.name === currentProject) || state.projects[0];
-  currentProject = project.name;
-  $('#crumb').textContent = `${TABS.workspace} · ${project.name}`;
+function videoPage() {
+  const project = currentVideo();
+  if (!project) { main.append(head('Video not found', 'It may have been renamed or removed.'), el('button', { className: 'ghost', onClick: () => goto('overview') }, '← Overview')); return; }
   const draft = project.drafts.find(d => d.path === selectedDraft) || project.drafts.find(d => d.path === project.approved) || project.drafts.at(-1);
-  selectedDraft = draft?.path;
-
-  const switcher = state.projects.length > 1 && el('label', { className: 'picker' }, el('span', { className: 'label' }, 'Select your project'), el('select', { onChange: e => openProject(e.target.value) }, state.projects.map(p => el('option', { value: p.name, selected: p.name === project.name }, p.name))));
+  selectedDraft = draft?.path; lastVideo = project;
   main.append(el('div', { className: 'ws-head' },
-    el('div', {}, el('h1', {}, project.name), el('p', { className: 'lede' }, 'Review drafts, compare versions, and continue working in Codex.')),
-    el('div', { className: 'row', style: 'align-items:flex-end' }, el('button', { className: 'ghost', onClick: () => navigate('videos') }, '← All projects'), switcher)));
-
-  if (needsApproval(project)) {
+    el('div', {}, el('h1', {}, project.name), el('p', { className: 'lede' }, `${currentGroup()?.title || project.project} · review drafts, compare versions, and continue working in your AI app.`)),
+    el('div', { className: 'row', style: 'align-items:flex-end' }, project.plan && el('button', { className: 'ghost', onClick: () => openPlan(project) }, 'View plan'), revealButton(project.folder, 'Show folder in Finder'))));
+  const finals = finalsFor(project);
+  const nudgeShown = needsApproval(project) && !isDismissed(project, latestDraft(project));
+  if (finals.length || !nudgeShown) main.append(el('section', { className: 'finals' }, el('span', { className: 'label' }, finals.length ? 'Final video' : 'Final video · none yet'),
+    finals.length ? finals.map(f => el('div', { className: 'ver' }, el('span', { className: 'vlabel' }, VERSION_LABEL[f.version]), el('span', { className: 'muted' }, `${f.name} · ${sizeLabel(f.bytes)} · ${dateLabel(f.modified)}${finalSource(project, f) ? ` · from ${draftTitle(finalSource(project, f).name).split(' · ')[0]}` : ''}`), el('div', { className: 'row' }, revealButton(f.path, 'Show in Finder'), el('a', { className: 'btn', href: mediaURL(f.path), download: f.name }, 'Download'), copyPathButton(f.path))))
+      : el('p', { className: 'muted', style: 'margin:6px 0 0' }, 'When you approve a draft, your AI app copies it to Finished videos and it shows up here.')));
+  if (needsApproval(project) && !isDismissed(project, latestDraft(project))) {
     const latest = latestDraft(project);
     main.append(el('div', { className: 'nudge', role: 'note' },
-      el('div', {}, el('strong', {}, `${stem(latest.name)} is not approved yet.`), el('span', {}, project.approved ? ' Your finished video is still an older draft. ' : ' Nothing is in Finished videos yet. ', 'Happy with it? Approve it so it becomes your finished video.')),
-      el('button', { className: 'primary', onClick: () => copy(approvalTextFor(project, latest)) }, `Copy approval of ${stem(latest.name)}`)));
+      el('div', {}, el('strong', {}, `${draftTitle(latest.name)} is not approved yet.`), el('span', {}, project.approved ? ' Your finished video is still an older draft. ' : ' Nothing is in Finished videos yet. ', 'Happy with it? Watch it all with sound, then approve it so it becomes your finished video.'), approveControls(project, latest, { dismissible: true }))));
   }
   // Left: preview + metadata.
   const stage = el('div', { className: 'stage' });
@@ -267,7 +455,7 @@ function workspaceView() {
       for (const id of ['#meta-duration', '#meta-resolution']) { const n = $(id); if (n) n.textContent = '—'; }
     });
     stage.append(player);
-    meta.append(kv('Draft', draft.name), kv('Duration', '…', 'meta-duration'), kv('Resolution', '…', 'meta-resolution'), kv('Format', draft.name.split('.').pop().toUpperCase()), kv('Size', sizeLabel(draft.bytes)), kv('Exported', dateLabel(draft.modified)),
+    meta.append(kv('Draft', draftTitle(draft.name)), kv('Duration', '…', 'meta-duration'), kv('Resolution', '…', 'meta-resolution'), kv('Format', draft.name.split('.').pop().toUpperCase()), kv('Size', sizeLabel(draft.bytes)), kv('Exported', dateLabel(draft.modified)),
       el('div', { className: 'actions' }, revealButton(draft.path), el('a', { className: 'btn', href: mediaURL(draft.path), download: draft.name }, 'Download'), copyPathButton(draft.path)));
   } else {
     stage.append(el('div', { className: 'stage-msg', style: 'position:static' }, 'No exports yet. Ask your AI app for a playable opening draft, not just a plan.'));
@@ -276,24 +464,25 @@ function workspaceView() {
   // Right: drafts, approval, feedback.
   const side = el('div', { className: 'side' });
   const list = el('div', { className: 'drafts', role: 'list' });
-  project.drafts.forEach((d, i) => list.append(el('button', { role: 'listitem', 'aria-current': String(d.path === draft?.path), onClick: () => { selectedDraft = d.path; render(); } },
-    el('span', { className: 'n' }, pad(i + 1)), el('span', { className: 't' }, stem(d.name)), d.path === project.approved ? el('span', { className: 'tag on' }, 'Approved') : el('span'),
+  [...project.drafts].reverse().forEach(d => list.append(el('button', { role: 'listitem', 'aria-current': String(d.path === draft?.path), className: d.path === project.approved ? 'approved' : '', onClick: () => { selectedDraft = d.path; render(); } },
+    el('span', { className: 'n' }, draftNumber(d.name) || '·'), el('span', { className: 't', title: d.name }, draftTitle(d.name)), d.path === project.approved ? el('span', { className: 'tag ok' }, '✓ Approved') : finalsFor(project).some(f => finalSource(project, f)?.path === d.path) ? el('span', { className: 'tag ok' }, `✓ ${VERSION_SHORT[finalsFor(project).find(f => finalSource(project, f)?.path === d.path).version]}`) : el('span'),
     el('span', { className: 's' }, `${dateLabel(d.modified)} · ${sizeLabel(d.bytes)}`))));
-  side.append(el('section', {}, el('div', { className: 'row between' }, el('span', { className: 'label' }, 'Drafts'), el('span', { className: 'mono muted' }, String(project.drafts.length))), project.drafts.length ? list : el('p', { className: 'muted', style: 'margin:10px 0 0' }, 'No drafts in drafts/ yet.')));
+  side.append(el('section', {}, el('div', { className: 'row between' }, el('span', { className: 'label' }, 'Drafts · newest first'), el('span', { className: 'mono muted' }, String(project.drafts.length))), project.drafts.length ? list : el('p', { className: 'muted', style: 'margin:10px 0 0' }, 'No drafts in drafts/ yet.')));
   if (draft) {
     const approvalText = approvalTextFor(project, draft);
     side.append(el('section', {}, el('span', { className: 'label' }, 'Approval'), el('div', { style: 'margin-top:10px' },
       draft.path === project.approved ? el('p', { style: 'margin:0' }, el('span', { className: 'tag on' }, 'Approved version'), el('span', { className: 'muted' }, ' · copied to finished-videos by your AI app'))
-        : copyBlock(approvalText, 'Copy approval for Codex', project.approved ? 'Replaces the current approval' : null))));
+        : nudgeShown && draft.path === latestDraft(project).path ? el('p', { className: 'muted', style: 'margin:0' }, 'Use the Approve button at the top of this page.')
+        : el('div', {}, approveControls(project, draft), project.approved && el('p', { className: 'muted', style: 'margin:8px 0 0' }, 'Replaces the current approval.')))));
   }
   const stamp = el('input', { placeholder: '00:08–00:12', 'aria-label': 'Timestamp' });
   const change = el('textarea', { rows: 4, placeholder: 'What should change? What must stay the same?', 'aria-label': 'Feedback' });
   const feedbackText = () => `${readRules}\nProject: ${project.name}\nDraft: ${draft ? draft.path : '(none yet — prepare a numbered 15-second opening once inputs are ready)'}\n\nFeedback${stamp.value ? ` at ${stamp.value}` : ''}:\n${change.value || '[describe the change and what must stay unchanged]'}\n\nRecord these notes in ${project.folder}/feedback.md. Preserve approved elements; save a new numbered draft without overwriting previous versions. Explain any timing impact. Hand me a playable MP4 and report unresolved limitations.`;
-  side.append(el('section', {}, el('span', { className: 'label' }, 'Feedback for Codex'),
+  side.append(el('section', {}, el('span', { className: 'label' }, 'Feedback: 1. write it, 2. copy, 3. paste in your AI app'),
     el('label', { className: 'field' }, el('span', {}, 'Timestamp (optional)'), stamp),
     el('label', { className: 'field' }, el('span', {}, 'What should change'), change),
-    el('div', { className: 'row', style: 'margin-top:12px' }, el('button', { className: 'primary', onClick: () => copy(feedbackText()) }, 'Copy feedback for Codex'), el('span', { className: 'muted' }, 'Paste it in your Codex chat.')),
-    el('details', { className: 'tip' }, el('summary', {}, 'Long or messy notes? Polish them first'),
+    el('div', { className: 'row', style: 'margin-top:12px' }, el('button', { className: 'primary', onClick: () => copy(feedbackText()) }, 'Copy feedback for your AI app'), el('span', { className: 'muted' }, 'Paste it in your AI app’s chat.')),
+    el('details', { className: 'tip' }, el('summary', {}, 'Get help tidying long notes'),
       el('ol', { className: 'steps' },
         el('li', {}, 'Write your notes the way they come (or collect them from a teammate).'),
         el('li', {}, 'Paste them into ChatGPT or a similar assistant with the template below. It turns them into a precise brief: timestamps, what to change, what must stay the same.'),
@@ -314,7 +503,7 @@ function workspaceView() {
     fold('Original footage', sourceStatus(project), source),
     fold('Brief', 'brief.md', docView(`${project.folder}/brief.md`)),
     fold('Feedback & context', 'feedback.md · by draft', feedbackHistory(project, draft)),
-    fold('Next step: extend to the full video', 'instruction', copyBlock(fullEdit, 'Copy instruction for Codex', 'Use after the opening is approved.'))));
+    fold('Next step: extend to the full video', 'instruction', copyBlock(fullEdit, 'Copy instruction for your AI app', 'Use after the opening is approved.'))));
 }
 
 function feedbackHistory(project, draft) {
@@ -364,76 +553,97 @@ function assetOverviewView(lib) {
 // Brand page: everything is read from the editing guide, so it always shows the saved brand (nothing is stored here).
 function brandFromGuide(text) {
   const section = name => { const m = new RegExp(`^## ${name}[^\\n]*\\n([\\s\\S]*?)(?=^## |$(?![\\s\\S]))`, 'm').exec(text); return m ? m[1] : ''; };
-  // Colours: the guide's "## Colour" section if it has one, otherwise its "Color:" / "Palette:" lines.
-  const colour = section('Colou?r') || (text.match(/^(?:Colou?r|Palette)[^:\n]*:.*$/gim) || []).join('\n');
-  const palette = [...colour.matchAll(/([A-Za-z][A-Za-z-]*(?: [A-Za-z-]+)?) \(?(#[0-9A-Fa-f]{6})/g)].map(m => ({ name: m[1][0].toUpperCase() + m[1].slice(1), hex: m[2].toUpperCase() }))
+  const colour = section('Colou?r');
+  const palette = [...colour.matchAll(/([A-Z][A-Za-z-]*(?: [A-Za-z-]+)?) (#[0-9A-Fa-f]{6})/g)].map(m => ({ name: m[1], hex: m[2].toUpperCase() }))
     .filter((p, i, all) => all.findIndex(q => q.hex === p.hex) === i);
-  const lum = hex => { const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
-  const byLight = palette.slice().sort((a, b) => lum(a.hex) - lum(b.hex));
-  const named = re => palette.find(p => re.test(p.name))?.hex;
-  const dark = byLight[0]?.hex, light = byLight.at(-1)?.hex;
-  const accent = named(/accent|highlight|brand|sand/i) || byLight[Math.floor(byLight.length / 2)]?.hex;
-  const capBox = /Caption box[^#\n]*(#[0-9A-Fa-f]{6})/i.exec(text)?.[1], highlight = /highlight[^#\n]*(#[0-9A-Fa-f]{6})/i.exec(text)?.[1];
-  const fonts = section('Fonts and lettering').split('\n').filter(l => /^(Title font|Spoken-caption font|Accent font)[^:]*: *\S/.test(l));
+  const find = name => palette.find(p => p.name.toLowerCase() === name.toLowerCase())?.hex;
+  const capBox = /Caption box (#[0-9A-Fa-f]{6})/i.exec(text)?.[1], highlight = /highlight block (#[0-9A-Fa-f]{6})/i.exec(text)?.[1];
+  const fonts = section('Fonts and lettering').split('\n').filter(l => /^(Title font|Spoken-caption font|Accent font)/.test(l));
   const reference = /(workspace\/finished-videos\/[^\s(),]+\.mp4)/.exec(text)?.[1];
-  const identity = /^Visual identity[^:]*: *(\S.*)$/m.exec(text)?.[1];
-  return { palette, dark, light, accent, capBox, highlight, fonts, reference, identity };
+  const identity = /^Visual identity[^:]*: (.*)$/m.exec(text)?.[1];
+  return { palette, paper: find('Paper'), sunk: find('Paper-sunk'), ink: find('Ink'), muted: find('Ink-muted'), line: find('Line'), accent: find('Mauve'), capBox, highlight, fonts, reference, identity };
 }
 function brandView() {
-  main.append(head('Your brand', 'How your videos look, shown from your editing guide. To change it, tell your AI app.'));
+  main.append(head('Brand', 'How your videos look, shown from your editing guide. To change it, tell your AI app.'));
   const box = el('div', {}, el('p', { className: 'muted' }, 'Reading your editing guide…'));
   main.append(box);
   api('/api/document?path=workspace%2Fpreferences%2Fediting-guide.md').then(({ content }) => {
     const b = brandFromGuide(content);
     if (!b.palette.length) { box.replaceChildren(el('div', { className: 'panel empty' }, 'Your editing guide has no colour palette yet. Ask your AI app to record your brand colours in workspace/preferences/editing-guide.md.')); return; }
     const paint = (node, styles) => { Object.assign(node.style, styles); return node; };
-    const dark = b.dark, light = b.light, accent = b.accent || light;
+    const paper = b.paper || '#F7F4EE', sunk = b.sunk || paper, ink = b.ink || '#16140F', muted = b.muted || ink, line = b.line || sunk, accent = b.accent || ink;
     const swatches = el('div', { className: 'swatches' }, b.palette.map(p => el('div', { className: 'swatch' }, paint(el('i'), { background: p.hex }), el('b', {}, p.name), el('span', { className: 'mono muted' }, p.hex))));
-    const title = paint(el('div', { className: 'specimen' }),
-      { background: dark, color: light });
-    title.append(paint(el('span', { className: 'eyebrow' }), { color: accent }), el('div', { className: 'h-sans' }, 'Your headline.'), paint(el('div', { className: 'h-serif' }, 'A second line.'), { color: accent }));
-    title.firstChild.textContent = '01 / Section title';
+    const title = paint(el('div', { className: 'specimen' }), { background: paper, color: ink, borderColor: line });
+    const headline = el('div', { className: 'h-mono' }, 'One idea. ', el('b', {}, 'One scene.'));
+    // The ensō: an open ring drawn in ink, with the frame's one accent dot beside it.
+    const svgNS = 'http://www.w3.org/2000/svg', enso = document.createElementNS(svgNS, 'svg');
+    enso.setAttribute('viewBox', '0 0 240 240'); enso.setAttribute('class', 'enso'); enso.setAttribute('aria-hidden', 'true');
+    const ring = document.createElementNS(svgNS, 'path'); ring.setAttribute('d', 'M202.69 89.9 A88 88 0 1 1 135.28 33.34');
+    Object.entries({ fill: 'none', stroke: ink, 'stroke-width': 14, 'stroke-linecap': 'round' }).forEach(([k, v]) => ring.setAttribute(k, v));
+    const dot = document.createElementNS(svgNS, 'circle'); Object.entries({ cx: 190, cy: 38, r: 14, fill: accent }).forEach(([k, v]) => dot.setAttribute(k, v));
+    enso.append(ring, dot);
+    title.append(paint(el('span', { className: 'eyebrow' }, '1. The problem'), { color: muted }), headline, enso);
     const caption = paint(el('div', { className: 'cap-stage' }), { background: '#cfcac3' });
-    const cap = paint(el('div', { className: 'cap-box' }), { background: b.capBox || dark, color: light });
-    ['Captions', 'follow', 'your', 'voice.'].forEach(w => cap.append(w === 'your' ? paint(el('span', { className: 'hl' }, w), { background: b.highlight || accent, color: dark }) : el('span', {}, w)));
+    const cap = paint(el('div', { className: 'cap-box' }), { background: b.capBox || ink, color: paper });
+    ['I', 'totally', 'suck', 'at', 'it.'].forEach(w => cap.append(w === 'suck' ? paint(el('span', { className: 'hl' }, w), { background: b.highlight || sunk, color: ink }) : el('span', {}, w)));
     caption.append(cap);
-    const card = paint(el('div', { className: 'card-sample' }), { background: light, color: dark });
-    card.append(paint(el('span', { className: 'clabel' }, 'Card label'), { color: dark }), el('div', { className: 'shot' }, el('i'), el('i'), el('i')), paint(el('div', { className: 'cfoot' }, 'A short takeaway.'), { color: dark }));
-    const cardStage = paint(el('div', { className: 'card-stage' }), { background: dark }); cardStage.append(card);
-    box.replaceChildren(
-      b.identity && inline(b.identity, el('p', { className: 'identity' })),
+    const card = paint(el('div', { className: 'card-sample' }), { background: sunk, color: ink, borderColor: line });
+    const shot = paint(el('div', { className: 'shot' }, el('i'), el('i'), el('i')), { borderColor: line });
+    shot.querySelectorAll('i').forEach(i => { i.style.background = line; });
+    card.append(paint(el('span', { className: 'clabel' }, 'Skills, assets & tools · installed'), { color: muted }), shot, el('div', { className: 'cfoot' }, 'Set it up ', el('b', {}, 'once.')));
+    const cardStage = paint(el('div', { className: 'card-stage' }), { background: paper, borderColor: line }); cardStage.append(card);
+    box.replaceChildren(...[
+      b.identity && fold('About this brand', 'from your guide', inline(b.identity, el('p', { className: 'identity' }))),
       el('div', { className: 'block' }, el('span', { className: 'label' }, 'Palette'), swatches),
       el('div', { className: 'block' }, el('span', { className: 'label' }, 'Type, captions and cards'), el('div', { className: 'brand-grid' },
-        el('figure', {}, title, el('figcaption', { className: 'muted' }, 'Section eyebrow, bold sans headline, italic serif second line.')),
-        el('figure', {}, caption, el('figcaption', { className: 'muted' }, 'Captions: the phrase, with the spoken word highlighted.')),
-        el('figure', {}, cardStage, el('figcaption', { className: 'muted' }, 'Cards: label, the cropped screenshot, an italic footer.')))),
-      b.fonts.length && el('div', { className: 'block' }, el('span', { className: 'label' }, 'Fonts'), el('div', { className: 'panel panel-body doc' }, b.fonts.map(f => inline(f, el('p'))))),
-      b.reference && el('div', { className: 'block' }, el('span', { className: 'label' }, 'Reference video'), el('div', { className: 'ref' }, el('video', { controls: true, playsInline: true, preload: 'metadata', src: mediaURL(b.reference) }), el('div', { className: 'stack' }, el('p', {}, 'The approved edit your brand comes from.'), el('div', { className: 'row' }, revealButton(b.reference), copyPathButton(b.reference))))),
-      el('p', { className: 'muted', style: 'margin-top:24px' }, 'Shown from workspace/preferences/editing-guide.md. These are browser previews in standard colour; videos rendered in HDR show the same colours.'));
+        el('figure', {}, title, el('figcaption', { className: 'muted' }, 'Typographic beat on paper: mono eyebrow, mono headline with the key words in bold, the ensō with one mauve dot.')),
+        el('figure', {}, caption, el('figcaption', { className: 'muted' }, 'Captions: phrase in an ink box, the spoken word on a paper-sunk block.')),
+        el('figure', {}, cardStage, el('figcaption', { className: 'muted' }, 'Cards: paper-sunk, hairline, mono label, the cropped screenshot, a sans footer.')))),
+      b.fonts.length && fold('Fonts', 'details from your guide', el('div', { className: 'panel-body doc' }, b.fonts.map(f => inline(f, el('p'))))),
+      b.reference && el('div', { className: 'block' }, el('span', { className: 'label' }, 'Reference video'), el('div', { className: 'ref' }, el('video', { controls: true, playsInline: true, preload: 'metadata', src: mediaURL(b.reference) }), el('div', { className: 'stack' }, el('p', {}, 'The approved edit this brand comes from. New videos start from it.'), el('div', { className: 'row' }, revealButton(b.reference), copyPathButton(b.reference))))),
+      el('p', { className: 'muted', style: 'margin-top:24px' }, 'Shown from workspace/preferences/editing-guide.md. These are browser previews in standard colour; your videos are rendered in HDR with matching colours.')].filter(Boolean));
   }).catch(error => box.replaceChildren(el('p', { className: 'error' }, `Could not read your editing guide: ${error.message}`)));
 }
 function statusRow(name, tag, detail) { return [el('div', {}, el('strong', {}, name)), el('div', { className: 'detail' }, detail || ''), el('div', {}, tag)]; }
+function workspaceCard() {
+  const name = wsName();
+  const steps = [
+    ['Name this workspace', Boolean(name), name ? `“${name}”` : 'Ask your AI app to set it up.'],
+    ['Tools and asset library', Boolean(state.library?.available), state.library?.available ? 'Ready.' : 'Ask your AI app: “Set up the asset library.”'],
+    ['First video started', state.videos.length > 0, state.videos.length ? `${state.videos.length} video${state.videos.length === 1 ? '' : 's'}.` : 'Copy a video into the drop folder.'],
+    ['First video finished', state.finishedVideos.length > 0, state.finishedVideos.length ? 'Approved and copied to Finished videos.' : 'Approve a draft to finish one.']];
+  return el('div', { className: 'panel ws-card' },
+    el('div', { className: 'row between' }, el('div', {}, el('span', { className: 'label' }, 'This workspace'), el('h2', {}, name || 'Not named yet')), name ? el('span', { className: 'mono muted', title: fullPath(state.workspace.file) }, state.workspace.file) : el('button', { className: 'primary', onClick: () => copy(nameWorkspaceText) }, 'Copy naming instruction')),
+    el('p', { className: 'copy-note' }, el('strong', {}, 'One brand or client = one copy of this folder. '), copyReminder.replace('One brand or client = one copy of this folder. ', '')),
+    el('div', { className: 'row' }, el('button', { className: 'ghost', onClick: () => copy(cleanCopyText(name)) }, 'Copy “make a clean copy” instruction'), el('span', { className: 'muted' }, 'Your videos here stay untouched. All copies on this Mac share one ElevenLabs account.')),
+    steps.every(x => x[1]) ? el('p', { className: 'muted', style: 'margin:0' }, '✓ Set up: workspace named, tools ready, first video started and finished.') : el('ul', { className: 'checks' }, steps.map(([label, done, note]) => el('li', { className: done ? 'done' : '' }, el('span', { className: 'tick' }, done ? '✓' : '○'), el('strong', {}, label), el('span', { className: 'muted' }, note)))));
+}
 function setupView() {
   main.append(el('div', { className: 'setup-head' }, head('Setup & preferences', 'Configure your editing environment and manage resources.'),
-    el('div', { className: 'disclaimer', role: 'note' }, el('strong', {}, 'This page only shows what Codex or Claude has set up.'), el('span', {}, 'To change any setting, ask them in the chat. The only things this app does itself: saving your ElevenLabs key (so it never goes through the chat) and Show in Finder.'))));
+    el('div', { className: 'disclaimer', role: 'note' }, el('strong', {}, 'This page only shows what your AI app has set up.'), el('span', {}, 'To change any setting, ask your AI app in the chat. The only things this app does itself: saving your ElevenLabs key (so it never goes through the chat) and Show in Finder.'))));
+  main.append(workspaceCard());
+  if (!tools.checked && !tools.loading) {
+    tools.loading = true;
+    api('/api/tools').then(result => { tools.result = result; tools.error = null; }).catch(error => { tools.error = error.message; }).finally(() => { tools.checked = true; tools.loading = false; if (route.name === 'setup') render(); });
+  }
   const lib = state.library;
   const manualMissing = lib ? lib.sources.filter(s => s.acquisition === 'manual' && !s.installed) : [];
-  const toolRow = (name, probe) => !tools.checked ? statusRow(name, el('span', { className: 'tag' }, 'Not checked'), 'Click “Check tools” to look.')
+  const toolRow = (name, probe) => !tools.checked ? statusRow(name, el('span', { className: 'tag' }, 'Checking…'), 'Looking for it on this Mac.')
     : tools.error ? statusRow(name, el('span', { className: 'tag bad' }, 'Error'), tools.error)
-    : probe.detected ? statusRow(name, el('span', { className: 'tag ok' }, 'Available'), probe.version) : statusRow(name, el('span', { className: 'tag bad' }, 'Missing'), 'Not found. Ask your AI app to set it up.');
+    : probe.detected ? statusRow(name, el('span', { className: 'tag ok' }, 'Ready'), probe.version) : statusRow(name, el('span', { className: 'tag bad' }, 'Needs fixing'), 'Not found. Tell your AI app: “Fix my setup.”');
   const status = el('div', { className: 'status' },
     statusRow('Project folder', state.projectsFolderExists ? el('span', { className: 'tag ok' }, 'Found') : el('span', { className: 'tag bad' }, 'Missing'), el('span', { className: 'mono', title: fullPath(state.projectsFolder) }, `${state.projectsFolder}/`)),
     statusRow('Asset library', !lib ? el('span', { className: 'tag' }, 'Unavailable') : lib.available ? el('span', { className: 'tag ok' }, 'Ready') : el('span', { className: 'tag bad' }, 'Not set up'),
       !lib ? 'Could not read system/assets/catalog.json.' : lib.available ? `${lib.available} of ${lib.catalogued} catalogued assets installed${manualMissing.length ? ` · ${manualMissing.length} optional packs not downloaded` : ''}` : 'Tell your AI app: “Set up the asset library.”'),
-    toolRow('Node.js', tools.result && { detected: true, version: tools.result.node }),
-    toolRow('FFmpeg', tools.result?.ffmpeg),
-    toolRow('Whisper', tools.result?.whisper));
-  const check = el('button', { className: 'ghost', onClick: async () => { check.disabled = true; try { tools.result = await api('/api/tools'); tools.error = null; } catch (error) { tools.error = error.message; } tools.checked = true; render(); } }, tools.checked ? 'Check again' : 'Check tools');
+    toolRow('Node.js (runs this app)', tools.result && { detected: true, version: tools.result.node }),
+    toolRow('FFmpeg (video and audio tools)', tools.result?.ffmpeg),
+    toolRow('Whisper (speech to text)', tools.result?.whisper));
+  const check = el('button', { className: 'ghost', onClick: async () => { check.disabled = true; try { tools.result = await api('/api/tools'); tools.error = null; } catch (error) { tools.error = error.message; } tools.checked = true; render(); } }, 'Check again');
   main.append(el('div', { className: 'panel' }, el('div', { className: 'panel-head' }, el('h2', {}, 'System status'), check), status,
-    tools.checked && !tools.error && el('p', { className: 'muted', style: 'margin:0;padding:10px 18px;border-top:1px solid var(--line);font-size:13px' }, 'Detection only. A playable test made by your AI app is what proves setup works.')));
+    tools.checked && !tools.error && el('p', { className: 'muted', style: 'margin:0;padding:10px 18px;border-top:1px solid var(--line);font-size:13px' }, 'This only looks for the tools. A short test video made by your AI app is what proves the setup works.')));
 
   const repo = state.repo;
-  main.append(el('section', { className: 'panel' }, el('div', { className: 'panel-head' }, el('div', {}, el('h2', {}, 'Keep QuickCut up to date'), el('p', { className: 'muted', style: 'margin:2px 0 0;font-size:13.5px' }, 'The app and its tools get improvements every now and then. Your videos, preferences and assets are never touched by an update.')), el('span', { className: 'tag' }, repo?.lastChanged ? `Last changed ${dateLabel(repo.lastChanged)}` : 'Not a git copy')),
+  main.append(el('section', { className: 'panel' }, el('div', { className: 'panel-head' }, el('div', {}, el('h2', {}, 'Keep this app up to date'), el('p', { className: 'muted', style: 'margin:2px 0 0;font-size:13.5px' }, 'The app and its tools get improvements every now and then. Your videos, preferences and assets are never touched by an update.')), el('span', { className: 'tag' }, repo?.lastChanged ? `Last changed ${dateLabel(repo.lastChanged)}` : 'Not a git copy')),
     el('div', { className: 'panel-body' }, copyBlock(updateText, 'Copy update instruction', 'Paste it into your AI app, e.g. once a month.'))));
   main.append(voicePanel());
 
@@ -450,9 +660,9 @@ function setupView() {
   const preview = el('pre', { className: 'preview' });
   const promptText = () => {
     const selected = factors.filter(f => choices.has(f.id)).map(f => `- ${f.title}: ${f.instructions[choices.get(f.id)]}`);
-    return selected.length ? `${readRules}\n${scope.value === 'guide' ? 'These are proposed reusable preferences. Reconcile them with the current guide; ask about conflicts before changing approved choices. Save agreed preferences in workspace/preferences/editing-guide.md.' : currentProject ? `These choices apply only to workspace/videos/${currentProject}. Read its brief and feedback. Save agreed choices in this video’s brief; do not promote them to universal defaults.` : 'These choices apply to one video only. Ask me which project before saving them.'}\n${selected.join('\n')}\nThese UI illustrations do not approve a font, exact size, color or asset. Preserve other approved elements. Do not render until I request a draft.` : '';
+    return selected.length ? `${readRules}\n${scope.value === 'guide' ? 'These are proposed reusable preferences. Reconcile them with the current guide; ask about conflicts before changing approved choices. Save agreed preferences in workspace/preferences/editing-guide.md.' : lastVideo ? `These choices apply only to workspace/projects/${lastVideo.project}/${lastVideo.name}. Read its brief and feedback. Save agreed choices in this video’s brief; do not promote them to universal defaults.` : 'These choices apply to one video only. Ask me which project before saving them.'}\n${selected.join('\n')}\nThese UI illustrations do not approve a font, exact size, color or asset. Preserve other approved elements. Do not render until I request a draft.` : '';
   };
-  const copyChoices = el('button', { className: 'primary', onClick: () => copy(promptText()) }, 'Copy choices for Codex');
+  const copyChoices = el('button', { className: 'primary', onClick: () => copy(promptText()) }, 'Copy choices for your AI app');
   const updatePrompt = () => { const t = promptText(); preview.textContent = t || 'Select a factor to build an instruction. Nothing is saved to your guide.'; copyChoices.disabled = !t; };
   scope.addEventListener('change', updatePrompt);
   const grid = el('div', { className: 'factor-grid' });
@@ -504,7 +714,7 @@ function voicePanel() {
 
   if (!v.connected || voice.editing) {
     if (!v.connected) body.append(el('p', {}, 'Generating speech uses credits from your ElevenLabs plan. Your AI app always shows you the script, the voice and the estimated cost, and waits for your OK before spending anything.'));
-    if (!v.sdkInstalled) body.append(el('div', { className: 'stack' }, el('p', { className: 'error' }, 'The voiceover tools are not installed yet.'), copyBlock('Install the voiceover tools (npm --prefix system/voiceover ci) and tell me when the ElevenLabs Connect button is ready.', 'Copy instruction for Codex')));
+    if (!v.sdkInstalled) body.append(el('div', { className: 'stack' }, el('p', { className: 'error' }, 'The voiceover tools are not installed yet.'), copyBlock('Install the voiceover tools (npm --prefix system/voiceover ci) and tell me when the ElevenLabs Connect button is ready.', 'Copy instruction for your AI app')));
     body.append(el('ol', { className: 'steps' },
       el('li', {}, 'Open ', el('a', { href: 'https://elevenlabs.io/app/settings/api-keys', target: '_blank', rel: 'noopener noreferrer' }, 'ElevenLabs → API keys'), ' and sign in (a free account works to start).'),
       el('li', {}, 'Create a key. Turn on ', el('strong', {}, 'Text to Speech'), '. Also allow reading ', el('strong', {}, 'Voices'), ' and ', el('strong', {}, 'User'), ' so voices can be listed and your account shown here.'),
@@ -518,12 +728,16 @@ function voicePanel() {
   const c = v.checks || {}, a = v.account;
   const yes = text => el('span', { className: 'tag ok' }, text), no = text => el('span', { className: 'tag' }, text);
   const credits = a && Number.isFinite(a.characterLimit) ? `${a.characterCount.toLocaleString()} of ${a.characterLimit.toLocaleString()} credits used${a.resetsAt ? ` · resets ${dateLabel(a.resetsAt)}` : ''}` : '';
-  body.append(el('div', { className: 'status rows' },
+  const pct = a && Number.isFinite(a.characterLimit) && a.characterLimit ? Math.min(100, Math.round(a.characterCount / a.characterLimit * 100)) : null;
+  body.append(el('div', { className: 'el-summary' },
+    el('div', { className: 'row' }, yes('Connected'), el('strong', {}, a?.name || 'ElevenLabs account'), a?.tier && el('span', { className: 'muted' }, a.tier)),
+    pct !== null && el('div', { className: 'credit' }, el('div', { className: `bar${pct >= 80 ? ' low' : ''}`, role: 'img', 'aria-label': `${pct}% of credits used` }, el('i', { style: `width:${pct}%` })), el('span', { className: pct >= 80 ? 'low-text' : 'muted' }, `${credits}${pct >= 80 ? ' · running low' : ''}`))));
+  body.append(el('details', { className: 'el-details' }, el('summary', { className: 'muted' }, 'Connection details'), el('div', { className: 'status rows' },
     statusRow('Account', a ? yes(a.tier || 'Connected') : no('Hidden'), a ? [a.name, credits].filter(Boolean).join(' · ') : 'This key may not read account details. That is fine for voiceovers.'),
     statusRow('API key', yes('Accepted'), `Checked with ElevenLabs on ${dateLabel(v.checkedAt || v.connectedAt)}. Stored in your Mac’s Keychain.`),
     statusRow('Voice list', c.voicesRead ? yes('Allowed') : no('Not allowed'), c.voicesRead ? 'Your AI app can suggest voices from your account.' : 'The key cannot list voices. Your AI app will need a voice ID, or create a key that can read voices.'),
     statusRow('Speech', c.speech === 'verified' ? yes('Confirmed') : no('Not yet confirmed'), c.speech === 'verified' ? `First voiceover generated on ${dateLabel(c.speechVerifiedAt)}.` : 'Confirmed by the first voiceover. Checking it here would cost credits.'),
-    statusRow('Preferred voice', v.preferredVoice ? yes('Set') : no('Not chosen'), v.preferredVoice ? `${v.preferredVoice.name || 'Unnamed voice'} · ${v.model}` : 'Describe the voice you want to your AI app; it will suggest a few to choose from.')));
+    statusRow('Preferred voice', v.preferredVoice ? yes('Set') : no('Not chosen'), v.preferredVoice ? `${v.preferredVoice.name || 'Unnamed voice'} · ${v.model}` : 'Describe the voice you want to your AI app; it will suggest a few to choose from.'))));
   const actions = el('div', { className: 'row' });
   if (voice.confirmDisconnect) actions.append(el('span', {}, 'Remove the key from this Mac?'),
     el('button', { className: 'primary', disabled: voice.busy, onClick: async () => { voice.busy = true; render(); try { state.voiceover = await post('/api/voiceover/disconnect', {}); message('ElevenLabs disconnected. The key was removed from your Keychain.'); } catch (error) { voice.error = error.message; } voice.busy = false; voice.confirmDisconnect = false; render(); } }, 'Disconnect'),
@@ -535,31 +749,76 @@ function voicePanel() {
   return panel;
 }
 
+const navSvg = {
+  overview: '<rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/>',
+  brand: '<circle cx="8" cy="9" r="3.2"/><circle cx="16" cy="9" r="3.2"/><circle cx="12" cy="15.5" r="3.2"/>',
+  setup: '<path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/>',
+};
+// Sidebar: Overview, then the workspace's projects as a tree (each project opens to its videos), then Brand and Setup.
+function buildNav() {
+  const nav = $('#nav'); if (!nav) return;
+  const link = (label, hash, { icon, active, className = '', title, after } = {}) => el('a', { className: `navlink ${className}${active ? ' active' : ''}`, href: hash, title, 'aria-current': active ? 'page' : null }, icon && svgIcon(navSvg[icon]), el('span', { className: 'navtext' }, label), after);
+  const dot = status => el('i', { className: `dot ${status === 'raw' ? 'idle' : status}`, title: { review: 'Waiting for your review', finished: 'Finished', raw: 'Not edited yet' }[status] });
+  const tree = state.projects.map(group => {
+    const list = state.videos.filter(v => v.project === group.name);
+    const inside = route.project === group.name;
+    const box = el('details', { className: 'navgroup', open: inside || openGroups.has(group.name) },
+      el('summary', {}, el('a', { href: `#project/${encodeURIComponent(group.name)}`, className: `grouplink${route.name === 'project' && inside ? ' active' : ''}` }, group.title), el('span', { className: 'count' }, String(list.length))),
+      el('div', { className: 'navvideos' }, list.map(v => link(v.name, `#${videoPath('video', v)}`, { className: 'sub', active: ['video', 'plan'].includes(route.name) && inside && route.video === v.name, after: dot(videoStatus(v)) }))));
+    box.addEventListener('toggle', () => { if (box.open) openGroups.add(group.name); else openGroups.delete(group.name); });
+    return box;
+  });
+  nav.replaceChildren(link('Overview', '#overview', { icon: 'overview', active: route.name === 'overview' }),
+    el('span', { className: 'navlabel' }, 'Projects'), ...(tree.length ? tree : [el('p', { className: 'navempty' }, 'No projects yet. Your AI app creates one with your first video.')]),
+    el('span', { className: 'navlabel spaced' }, 'Workspace'), link('Brand', '#brand', { icon: 'brand', active: route.name === 'brand' }), link('Setup & preferences', '#setup', { icon: 'setup', active: route.name === 'setup' }));
+}
+function buildCrumb() {
+  const parts = [[ 'Overview', '#overview' ]];
+  const group = route.project && currentGroup();
+  if (['project', 'video', 'plan'].includes(route.name)) parts.push([group?.title || route.project, route.name === 'project' ? null : `#project/${encodeURIComponent(route.project)}`]);
+  if (['video', 'plan'].includes(route.name)) parts.push([route.video, route.name === 'plan' ? `#video/${encodeURIComponent(route.project)}/${encodeURIComponent(route.video)}` : null]);
+  if (route.name === 'plan') parts.push(['Plan', null]);
+  if (route.name === 'brand') parts[0] = ['Brand', null]; if (route.name === 'setup') parts[0] = ['Setup & preferences', null];
+  $('#crumb').replaceChildren(...parts.flatMap(([label, href], i) => [i ? el('span', { className: 'sep', 'aria-hidden': 'true' }, '›') : null, href ? el('a', { href }, label) : el('span', { className: 'here', 'aria-current': 'page' }, label)].filter(Boolean)));
+}
+const pageTitle = () => route.name === 'video' || route.name === 'plan' ? route.video : route.name === 'project' ? (currentGroup()?.title || route.project) : TABS[route.name] || 'Overview';
 function render() {
   main.replaceChildren();
-  $('#crumb').textContent = TABS[tab];
-  document.querySelectorAll('[data-tab]').forEach(b => { if (b.dataset.tab === tab) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
-  try { if (tab === 'setup') setupView(); else if (tab === 'workspace') workspaceView(); else if (tab === 'brand') brandView(); else videosView(); }
+  buildNav(); buildCrumb();
+  $('#brand-name').textContent = wsName() || 'Video companion';
+  $('#brand-sub').textContent = 'Local · read-only';
+  document.title = `${wsName() ? `${wsName()} · ` : ''}${pageTitle()}`;
+  $('#notice').hidden = route.name !== 'setup' || storageGet(`notice:${state.root}`) === 'seen';
+  try { if (route.name === 'setup') setupView(); else if (route.name === 'video') videoPage(); else if (route.name === 'plan') planView(); else if (route.name === 'project') projectView(); else if (route.name === 'brand') brandView(); else overviewView(); }
   catch (error) { main.append(el('p', { className: 'error' }, `Something went wrong showing this page: ${error.message}`)); }
-  if (currentProject) storageSet(`project:${state.root}`, currentProject);
   window.scrollTo(0, 0);
 }
-function navigate(next) { if (location.hash.slice(1) === next) render(); else location.hash = next; }
-function fromHash() { const h = location.hash.slice(1); tab = h in TABS ? h : 'videos'; }
+function navigate(next) { goto(next); }
+function fromHash() { parseHash(); }
 async function reloadState() {
   state = await api('/api/state');
-  if (currentProject && !state.projects.some(p => p.name === currentProject)) { currentProject = null; selectedDraft = null; }
   render();
 }
-document.querySelectorAll('[data-tab]').forEach(button => button.addEventListener('click', () => navigate(button.dataset.tab)));
+let lastLoad = Date.now();
+// Picks up new files when you come back to this tab; skips the redraw while you are typing so nothing you wrote is lost.
+async function quietReload() {
+  if (!state || Date.now() - lastLoad < 8000) return; lastLoad = Date.now();
+  try {
+    const next = await api('/api/state');
+    if (JSON.stringify(next) === JSON.stringify(state)) return;
+    state = next;
+    const typing = document.activeElement?.matches?.('input, textarea') && document.activeElement.value;
+    if (!typing) render();
+  } catch {}
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) quietReload(); });
+window.addEventListener('focus', quietReload);
 window.addEventListener('hashchange', () => { fromHash(); if (state) render(); });
 $('#refresh').addEventListener('click', async () => { try { await reloadState(); message('Files refreshed from disk.'); } catch (error) { message(`Refresh failed: ${error.message}`, true); } });
 try {
   state = await api('/api/state');
-  currentProject = storageGet(`project:${state.root}`) || state.projects[0]?.name;
   fromHash();
   $('#folder').textContent = state.root;
-  $('#notice').hidden = storageGet(`notice:${state.root}`) === 'seen';
   $('#dismiss').addEventListener('click', () => { storageSet(`notice:${state.root}`, 'seen'); $('#notice').hidden = true; });
   render();
 } catch (error) { main.replaceChildren(el('h1', {}, 'Could not read the local workspace'), el('p', { className: 'error' }, error.message), el('p', {}, 'Ask your AI app to inspect the app and its folder paths.')); }

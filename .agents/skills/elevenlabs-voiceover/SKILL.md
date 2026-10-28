@@ -14,7 +14,7 @@ Optional, paid. Tool: `node system/voiceover/voiceover.mjs` (run from the repo r
 - `checks.voicesRead: false` → the key cannot list voices; ask for a voice ID or a key with Voices read access.
 
 ## 1. Script first (free)
-Write the narration to fit the video (length, tone, what is on screen). Save it as `workspace/videos/<name>/work/voiceover-script.txt`. Spoken words stay plain text; delivery goes in square-bracket tags, which are spoken as direction, not read out and never captioned:
+Write the narration to fit the video (length, tone, what is on screen). Save it as `workspace/projects/<project>/<video>/work/voiceover-script.txt`. Spoken words stay plain text; delivery goes in square-bracket tags, which are spoken as direction, not read out and never captioned:
 - Tags (Eleven v4): `[warm]`, `[calm, thoughtful]`, `[excited]`, `[confident]`, `[whispers]`, `[sighs]`, `[laughs]`, `[curious]`, `[sarcastic]`, or plain descriptions like `[low, gravelly voice]`, `[building tension, measured pace]`, `[softly, with wonder]`.
 - Turn the owner's direction into tags at the right sentences: "start calm, get enthusiastic, end confident" → `[calm] … [growing enthusiasm] … [confident]`.
 - Pauses: ellipses (…) and sentence breaks. CAPITALS add emphasis. No SSML (`<break>` etc.).
@@ -33,7 +33,7 @@ Show the owner: the full script with tags, the voice, the intended delivery, mod
 ## 4. Generate
 `voiceover.mjs generate --project <name> --script <file> --voice <id> --approved`
 - An identical request returns the existing take for free (`reused: true`). A new performance of the same script needs `--new-take` and its own approval. Never regenerate on your own to "improve" a take.
-- Takes are saved in `workspace/videos/<name>/voiceover/take-NNN/` (audio, script, spoken text, raw alignment, `words.json`, `take.json`) and never overwritten.
+- Takes are saved in `workspace/projects/<project>/<video>/voiceover/take-NNN/` (audio, script, spoken text, raw alignment, `words.json`, `take.json`) and never overwritten.
 - Exit 6 (`uncertain`): the request may have been charged. Do not retry; ask the owner to check their ElevenLabs usage page first. Exit 5: explain the reason (credits, permissions, voice, busy). Exit 4: connection problem, see step 0.
 - Read `warnings` in the result. No `words.json` means no timing came back: say captions cannot be synced from this take. Never estimate word timings yourself. Forced alignment would cost extra; offer it only with the cost and approval.
 

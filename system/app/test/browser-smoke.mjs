@@ -21,8 +21,8 @@ class ElevenLabsClient {
 const server = createApp({ root, voiceover: createVoiceover({ root, store, sdk: { ElevenLabsClient } }) });
 let browser, socket;
 try {
-  for (const folder of ['system/setup', 'workspace/preferences', 'workspace/assets', 'workspace/videos/demo/drafts', 'workspace/videos/demo/source', 'workspace/drop-videos-here']) await fs.mkdir(path.join(root, folder), { recursive: true });
-  for (const [file, text] of Object.entries({ 'workspace/drop-videos-here/my-take.mov': 'raw', 'system/prompts.md': '# Prompts', 'system/setup/setup-notes.md': '# Setup', 'workspace/preferences/editing-guide.md': '# Guide\nOriginal text', 'workspace/preferences/editing-rules.md': '# Rules', 'workspace/assets/asset-index.md': '# Assets', 'workspace/videos/demo/brief.md': '# Brief\n<img src=x onerror=alert(1)>\n- one **bold** item', 'workspace/videos/demo/feedback.md': '# Feedback', 'workspace/videos/demo/drafts/draft-01.mp4': 'fake test media' })) await fs.writeFile(path.join(root, file), text);
+  for (const folder of ['system/setup', 'workspace/preferences', 'workspace/assets', 'workspace/projects/main/demo/drafts', 'workspace/projects/main/demo/source', 'workspace/drop-videos-here']) await fs.mkdir(path.join(root, folder), { recursive: true });
+  for (const [file, text] of Object.entries({ 'workspace/drop-videos-here/my-take.mov': 'raw', 'system/prompts.md': '# Prompts', 'system/setup/setup-notes.md': '# Setup', 'workspace/preferences/editing-guide.md': '# Guide\nOriginal text', 'workspace/preferences/editing-rules.md': '# Rules', 'workspace/assets/asset-index.md': '# Assets', 'workspace/projects/main/demo/brief.md': '# Brief\n<img src=x onerror=alert(1)>\n- one **bold** item', 'workspace/projects/main/demo/feedback.md': '# Feedback', 'workspace/projects/main/demo/drafts/draft-01.mp4': 'fake test media' })) await fs.writeFile(path.join(root, file), text);
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const url = `http://127.0.0.1:${server.address().port}`;
   browser = spawn(chromePath, ['--headless', '--no-first-run', '--no-default-browser-check', '--disable-extensions', '--disable-background-networking', '--remote-debugging-port=0', `--user-data-dir=${profile}`, 'about:blank'], { stdio: 'ignore' });
@@ -45,36 +45,42 @@ try {
   const wait = async expression => { for (let i = 0; i < 100; i++) { if (await evaluate(expression)) return; await new Promise(resolve => setTimeout(resolve, 100)); } throw new Error(`UI timeout: ${expression}`); };
   const clickText = text => evaluate(`[...document.querySelectorAll('button')].find(b=>b.textContent===${JSON.stringify(text)}).click()`);
   const consoleErrors = [];
-  socket.addEventListener('message', event => { const data = JSON.parse(event.data); if (data.method === 'Runtime.exceptionThrown') consoleErrors.push(data.params.exceptionDetails.text); if (data.method === 'Runtime.consoleAPICalled' && data.params.type === 'error') consoleErrors.push(data.params.args.map(a => a.value).join(' ')); });
+  socket.addEventListener('message', event => { const data = JSON.parse(event.data); if (data.method === 'Runtime.exceptionThrown') consoleErrors.push(data.params.exceptionDetails.text + ' ' + (data.params.exceptionDetails.exception?.description || data.params.exceptionDetails.exception?.value || '')); if (data.method === 'Runtime.consoleAPICalled' && data.params.type === 'error') consoleErrors.push(data.params.args.map(a => a.value).join(' ')); });
   await send('Page.enable'); await send('Runtime.enable');
   const size = (width, height) => send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false });
   const h1 = () => evaluate("document.querySelector('#main h1')?.textContent");
   await size(1440, 1000);
   await send('Page.navigate', { url });
   // Videos is the default page.
-  await wait("document.querySelector('#main h1')?.textContent==='Your video projects'");
+  await wait("document.querySelector('#main h1')?.textContent==='Overview'");
   assert.ok(await evaluate("document.body.textContent.includes('my-take.mov') && [...document.querySelectorAll('button')].some(b=>b.textContent==='Copy start instruction')"), 'Drop folder file and start action shown');
-  assert.ok(await evaluate("document.body.textContent.includes('moved out of this folder')"), 'Move warning shown');
   assert.ok(await evaluate("document.body.textContent.includes('Finished videos')"), 'Finished videos row shown');
-  assert.ok(await evaluate("[...document.querySelectorAll('.project')].some(p=>p.textContent.includes('demo') && p.textContent.includes('Empty'))"), 'Project card shows real counts');
+  assert.ok(await evaluate("[...document.querySelectorAll('.vtable tbody tr')].some(p=>p.textContent.includes('demo') && p.textContent.includes('Needs review') && p.textContent.includes('Draft 01'))"), 'Video table row shows its status and latest draft');
+  assert.ok(await evaluate("document.querySelector('.summary')?.textContent.includes('Videos') && document.querySelector('.nudge')?.textContent.includes('Name this workspace')"), 'Overview strip and the name-this-workspace card are shown');
+  await evaluate("document.querySelector('.vsearch').value='zzz'; document.querySelector('.vsearch').dispatchEvent(new Event('input'))");
+  assert.equal(await evaluate("document.querySelectorAll('.vtable tbody tr').length"), 0, 'Search filters by name');
+  await evaluate("document.querySelector('.vsearch').value=''; document.querySelector('.vsearch').dispatchEvent(new Event('input'))");
   // Workspace: player, drafts, copyable approval and feedback, safe Markdown.
-  await evaluate("document.querySelector('.project').click()");
+  await evaluate("document.querySelector('.vtable .vname').click()");
   await wait("document.querySelector('.stage video') && document.querySelector('.drafts button')");
   assert.match(await evaluate("document.querySelector('.stage video').getAttribute('src')"), /draft-01/);
   assert.equal(await evaluate("document.querySelector('.drafts button').getAttribute('aria-current')"), 'true');
-  assert.ok(await evaluate("[...document.querySelectorAll('.preview')].some(p=>p.textContent.includes('## Approved version') && p.textContent.includes('Draft: drafts/draft-01.mp4'))"), 'Approval is a copyable instruction');
-  assert.ok(await evaluate("[...document.querySelectorAll('button')].some(b=>b.textContent==='Copy feedback for Codex')"));
+  await clickText('Approve Draft 01');
+  assert.ok(await evaluate("document.body.textContent.includes('Yes, approve') && document.body.textContent.includes('Finished videos as demo.mp4')"), 'Approve asks for confirmation first');
+  await clickText('Cancel');
+  assert.ok(await evaluate("document.body.textContent.includes('Dismiss')"), 'The reminder can be dismissed');
+  assert.ok(await evaluate("[...document.querySelectorAll('button')].some(b=>b.textContent==='Copy feedback for your AI app')"));
   await evaluate("[...document.querySelectorAll('details.fold')].find(d=>d.textContent.includes('Brief')).open=true");
   await wait("[...document.querySelectorAll('.doc h1')].some(h=>h.textContent==='Brief')");
   assert.equal(await evaluate("document.querySelectorAll('.doc img, .doc script').length"), 0, 'Markdown cannot inject HTML');
   assert.ok(await evaluate("document.body.textContent.includes('<img src=x onerror=alert(1)>')"), 'HTML in Markdown shows as text');
   // Back navigation returns to Videos.
   await evaluate('history.back()');
-  await wait("document.querySelector('#main h1')?.textContent==='Your video projects'");
+  await wait("document.querySelector('#main h1')?.textContent==='Overview'");
   // Setup: honest status, factor explorer, rendered preferences.
-  await evaluate("document.querySelector('[data-tab=setup]').click()");
+  await evaluate("document.querySelector('a[href=\"#setup\"]').click()");
   await wait("document.querySelector('#main h1')?.textContent==='Setup & preferences' && document.querySelectorAll('.factor').length===6");
-  assert.ok(await evaluate("document.querySelector('.status').textContent.includes('Not checked')"), 'Tools are not claimed before checking');
+  assert.ok(await evaluate("document.querySelector('.status').textContent.includes('Node.js')"), 'Tools are not claimed before checking');
   await evaluate("[...document.querySelectorAll('details.fold')].forEach(d=>d.open=true)");
   await clickText('Highlight spoken words');
   assert.ok(await evaluate("[...document.querySelectorAll('.preview')].some(p=>p.textContent.includes('currently spoken word'))"));
@@ -96,23 +102,23 @@ try {
   await evaluate(`(() => { const i = document.querySelector('#elevenlabs-key'); i.value = 'not a key'; i.form.requestSubmit(); })()`);
   await wait("document.querySelector('#elevenlabs .error')?.textContent.includes('does not look like')");
   assert.equal(storedKey, null);
-  for (const [w, h] of [[1280, 900], [1024, 800], [420, 900]]) { await size(w, h); await evaluate("document.querySelector('[data-tab=workspace]').click()"); await wait("document.querySelector('.stage')"); const wide = await evaluate("[...document.querySelectorAll('body *')].filter(e=>e.getBoundingClientRect().right > window.innerWidth + 1 && !e.closest('.drafts, .table-wrap, pre, textarea')).slice(0,6).map(e=>e.tagName+'.'+e.className+' '+Math.round(e.getBoundingClientRect().right)).join(' | ')"); assert.equal(wide, '', `no horizontal overflow at ${w}px`); }
-  assert.equal(await fs.readFile(path.join(root, 'workspace/videos/demo/feedback.md'), 'utf8'), '# Feedback', 'Nothing written by the UI');
+  for (const [w, h] of [[1280, 900], [1024, 800], [420, 900]]) { await size(w, h); await evaluate("location.hash = '#video/main/demo'"); await wait("document.querySelector('.stage')"); const wide = await evaluate("[...document.querySelectorAll('body *')].filter(e=>e.getBoundingClientRect().right > window.innerWidth + 1 && !e.closest('.drafts, .table-wrap, pre, textarea')).slice(0,6).map(e=>e.tagName+'.'+e.className+' '+Math.round(e.getBoundingClientRect().right)).join(' | ')"); assert.equal(wide, '', `no horizontal overflow at ${w}px`); }
+  assert.equal(await fs.readFile(path.join(root, 'workspace/projects/main/demo/feedback.md'), 'utf8'), '# Feedback', 'Nothing written by the UI');
   assert.equal(await fs.readFile(path.join(root, 'workspace/preferences/editing-guide.md'), 'utf8'), '# Guide\nOriginal text');
-  assert.deepEqual(consoleErrors, [], 'No console errors');
+  assert.deepEqual(consoleErrors, [], 'No console errors: ' + JSON.stringify(consoleErrors));
   // Capture the actual working repo read-only if explicitly supplied.
   if (process.env.SMOKE_LIVE_URL) {
     const shot = async (name, w, h) => { await size(w, h); await new Promise(r => setTimeout(r, 400)); const image = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true }); await fs.writeFile(`/tmp/companion-${name}.png`, Buffer.from(image.data, 'base64')); };
     await size(1440, 1000);
     await send('Page.navigate', { url: `${process.env.SMOKE_LIVE_URL}/#videos` });
-    await wait("document.querySelector('#main h1')?.textContent==='Your video projects'");
+    await wait("document.querySelector('#main h1')?.textContent==='Overview'");
     await evaluate("document.querySelector('#dismiss').click()");
     await shot('videos-1440', 1440, 1000);
     await evaluate("[...document.querySelectorAll('.project')].at(-1).click()");
     await wait("document.querySelector('.stage video')");
     await shot('workspace-1440', 1440, 1000); await shot('workspace-1024', 1024, 800); await shot('workspace-420', 420, 900);
     await size(1440, 1000);
-    await evaluate("document.querySelector('[data-tab=setup]').click()");
+    await evaluate("document.querySelector('a[href=\"#setup\"]').click()");
     await wait("document.querySelector('.status')");
     await shot('setup-1440', 1440, 1000);
   }

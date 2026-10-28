@@ -22,7 +22,7 @@ Before editing, read AGENTS.md, system/editing-brain.md, workspace/preferences/e
 
 ## create my first draft
 
-Read my saved editing files and this video's brief (workspace/videos/<name>/brief.md). Inspect the footage and identify the take and transcript you’ll use. Create a 15-second opening draft using my reference, font files and approved supporting media. Keep my real voice, meaning and face unchanged. Give me a playable MP4, not just an edit plan, and tell me which choices need my review. Number the draft and preserve the source.
+Read my saved editing files and workspace/projects/<project>/<video>/brief.md. Inspect the footage and identify the take and transcript you’ll use. Create a 15-second opening draft using my reference, font files and approved supporting media. Keep my real voice, meaning and face unchanged. Give me a playable MP4, not just an edit plan, and tell me which choices need my review. Number the draft and preserve the source.
 
 ## apply a feedback round
 

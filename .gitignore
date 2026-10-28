@@ -12,8 +12,8 @@ system/app/.runtime.log
 *.wav
 *.mp3
 *.m4a
-workspace/videos/*
-!workspace/videos/README.md
+workspace/projects/*
+!workspace/projects/README.md
 workspace/assets/models/
 workspace/drop-videos-here/*
 !workspace/drop-videos-here/README.txt

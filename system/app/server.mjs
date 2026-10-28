@@ -75,22 +75,55 @@ async function mediaFiles(root, folder) {
   }
   return files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
 }
+function approvedOn(text) {
+  const records = [...text.matchAll(/^## Approved version\nDraft: [^\n]+\nApproved by the owner on ([^\n]+?) after /gm)];
+  return records.length ? records.at(-1)[1].trim() : null;
+}
 function approvedDraft(text) {
   const records = [...text.matchAll(/^## Approved version\nDraft: (drafts\/[^\n]+)$/gm)];
   if (records.length) return records.at(-1)[1];
   return /^Filename: (drafts\/[^\n]+\.mp4) — full-video draft accepted as final/m.exec(text)?.[1] || null;
 }
-async function projects(root) {
+// Disk use of a folder in bytes (du, read-only); null when it cannot be measured.
+async function folderBytes(root, folder) {
+  try { const { stdout } = await run('du', ['-sk', await safePath(root, folder)], { timeout: 8000 }); const kb = Number(stdout.split(/\s/)[0]); return Number.isFinite(kb) ? kb * 1024 : null; }
+  catch { return null; }
+}
+// The workspace's name: the "Name:" line of workspace/preferences/workspace.md (one brand or client per copy of this folder).
+async function workspaceInfo(root) {
+  const file = 'workspace/preferences/workspace.md';
+  const { content } = await document(root, file);
+  return { file, exists: Boolean(content), name: /^Name:[ \t]*(.+)$/m.exec(content)?.[1].trim() || null };
+}
+// Workspace -> projects -> videos: workspace/projects/<project>/<video>/. A project folder may hold a project.md ("Name:", "About:").
+async function projectGroups(root) {
   const result = [];
-  for (const entry of await entries(root, 'workspace/videos')) {
+  for (const entry of await entries(root, 'workspace/projects')) {
     if (!entry.isDirectory() || !projectName.test(entry.name)) continue;
-    const folder = `workspace/videos/${entry.name}`;
-    const feedback = await document(root, `${folder}/feedback.md`);
-    const drafts = (await mediaFiles(root, `${folder}/drafts`)).filter(d => /\.(mp4|mov|m4v|webm)$/i.test(d.name));   // videos only (drafts/ also holds voice + effects WAVs)
-    const approved = approvedDraft(feedback.content);
-    result.push({ name: entry.name, folder, drafts, sourceExists: await folderExists(root, `${folder}/source`), source: await mediaFiles(root, `${folder}/source`), approved: drafts.some(d => `${folder}/${approved}` === d.path) ? `${folder}/${approved}` : null });
+    const folder = `workspace/projects/${entry.name}`;
+    const meta = (await document(root, `${folder}/project.md`)).content;
+    result.push({ name: entry.name, folder, title: /^Name:[ \t]*(.+)$/m.exec(meta)?.[1].trim() || entry.name, about: /^About:[ \t]*(.+)$/m.exec(meta)?.[1].trim() || '' });
   }
-  return result.sort((a, b) => a.name.localeCompare(b.name));
+  return result.sort((a, b) => a.title.localeCompare(b.title));
+}
+async function videos(root, groups) {
+  const result = [];
+  for (const group of groups) for (const entry of await entries(root, group.folder)) {
+    if (!entry.isDirectory() || !projectName.test(entry.name)) continue;
+    const folder = `${group.folder}/${entry.name}`;
+    const feedback = await document(root, `${folder}/feedback.md`);
+    const files = await entries(root, folder);
+    const drafts = (await mediaFiles(root, `${folder}/drafts`)).filter(d => /\.(mp4|mov|m4v|webm)$/i.test(d.name));   // videos only (drafts/audio holds the voice + effects WAVs)
+    const approved = approvedDraft(feedback.content);
+    result.push({ name: entry.name, project: group.name, projectTitle: group.title, folder, drafts, sourceExists: await folderExists(root, `${folder}/source`), source: await mediaFiles(root, `${folder}/source`), approved: drafts.some(d => `${folder}/${approved}` === d.path) ? `${folder}/${approved}` : null, approvedOn: approvedOn(feedback.content), poster: files.some(e => e.isFile() && e.name === 'poster.jpg') ? `${folder}/poster.jpg` : null, plan: files.some(e => e.isFile() && e.name === 'plan.md') ? `${folder}/plan.md` : null, bytes: await folderBytes(root, folder) });
+  }
+  return result.sort((a, b) => a.projectTitle.localeCompare(b.projectTitle) || a.name.localeCompare(b.name));
+}
+// Finished videos live in workspace/finished-videos/<project>/ (files directly in finished-videos/ are listed too, without a project).
+async function finishedFiles(root) {
+  const result = (await mediaFiles(root, finishedFolder)).map(f => ({ ...f, project: '' }));
+  for (const entry of await entries(root, finishedFolder)) if (entry.isDirectory() && projectName.test(entry.name)) result.push(...(await mediaFiles(root, `${finishedFolder}/${entry.name}`)).map(f => ({ ...f, project: entry.name })));
+  return result;
 }
 async function assets(root, folder = 'workspace/assets', depth = 0) {
   const result = [];
@@ -147,6 +180,45 @@ async function revealInFinder(file) {
   if (process.platform !== 'darwin') throw fail(501, 'Show in Finder works on macOS only');
   await run('open', ['-R', file], { timeout: 4000 });
 }
+// Third owner-approved exception (2026-10-28): approving a draft from the companion. It does exactly what AGENTS.md asks the AI app
+// to do on approval: appends the approval record to the video's feedback.md (append only), copies the draft to finished-videos/
+// (replacing that version's previous finished copy) and makes the small poster. It never renders, edits or deletes anything.
+const finishedVersions = { '': '', vertical: '-vertical', square: '-square', youtube: '-youtube' };
+async function makePoster(from, to) {
+  const candidates = ['/opt/homebrew/opt/ffmpeg-full/bin/ffmpeg', 'ffmpeg'];
+  const filters = ['zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=hable,zscale=t=bt709:m=bt709:r=tv,scale=360:-2,format=yuvj420p', 'scale=360:-2'];
+  for (const bin of candidates) for (const vf of filters) {
+    try { await run(bin, ['-v', 'error', '-y', '-ss', '0.8', '-i', from, '-frames:v', '1', '-vf', vf, '-q:v', '4', to], { timeout: 30000 }); return true; } catch { /* try the next */ }
+  }
+  return false;
+}
+async function approveDraft(root, { project, video, draft, version = '' }) {
+  if (typeof project !== 'string' || !projectName.test(project) || typeof video !== 'string' || !projectName.test(video)) throw fail(400, 'Unknown video');
+  if (typeof draft !== 'string' || !/^drafts\/[^/]+\.(mp4|mov|m4v|webm)$/i.test(draft)) throw fail(400, 'Pick one of this video’s drafts');
+  if (!(version in finishedVersions)) throw fail(400, 'Unknown version');
+  const folder = `workspace/projects/${project}/${video}`;
+  const source = await safePath(root, `${folder}/${draft}`);
+  if (!(await fs.stat(source)).isFile()) throw fail(404, 'Draft not found');
+  const finished = await entries(root, `${finishedFolder}/${project}`);
+  const names = finished.filter(e => e.isFile()).map(e => e.name);
+  const mine = names.filter(n => new RegExp(`^${video.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(-vertical|-square|-youtube)?\\.mp4$`).test(n));
+  const hasVariants = mine.some(n => /-(vertical|square|youtube)\.mp4$/.test(n));
+  if (version === '' && hasVariants) throw fail(409, 'This video has several versions. Pick which one this draft replaces.');
+  if (version !== '' && mine.includes(`${video}.mp4`)) throw fail(409, `${video}.mp4 exists without a version name. Ask your AI app to rename it (-vertical or -square) first.`);
+  const target = `${finishedFolder}/${project}/${video}${finishedVersions[version]}.mp4`;
+  const feedbackFile = await safePath(root, `${folder}/feedback.md`, { missing: true });
+  const date = new Date().toLocaleDateString('en-CA');
+  const existing = await fs.readFile(feedbackFile, 'utf8').catch(error => { if (error.code === 'ENOENT') return ''; throw error; });
+  const record = `${existing && !existing.endsWith('\n') ? '\n' : ''}\n## Approved version\nDraft: ${draft}\nApproved by the owner on ${date} after a full review.\nApproved in the companion app; copied to ${target.replace('workspace/', '')}.\n`;
+  // copy first (to a temp name, then rename), record second: a failed copy leaves no approval behind
+  await fs.mkdir(path.join(await safePath(root, finishedFolder), project), { recursive: true });
+  const destination = await safePath(root, target, { missing: true });
+  const temp = `${destination}.tmp-${process.pid}`;
+  try { await fs.copyFile(source, temp); await fs.rename(temp, destination); } catch (error) { await fs.rm(temp, { force: true }); throw error; }
+  await fs.appendFile(feedbackFile, record);
+  const poster = await makePoster(source, await safePath(root, `${folder}/poster.jpg`, { missing: true }));
+  return { ok: true, finished: target, poster, date };
+}
 async function readJsonBody(req, limit = 4096) {
   let size = 0; const chunks = [];
   for await (const chunk of req) { size += chunk.length; if (size > limit) throw fail(413, 'Request too large'); chunks.push(chunk); }
@@ -194,12 +266,18 @@ export function createApp({ root = defaultRoot, voiceover = createVoiceover({ ro
         await reveal(await safePath(root, body.path));
         return json(200, { ok: true });
       }
+      if (req.method === 'POST' && url.pathname === '/api/approve') {
+        if (!origin || !['same-origin', undefined].includes(req.headers['sec-fetch-site'])) throw fail(403, 'Only this page can approve a draft');
+        if (!/^application\/json(;|$)/.test(req.headers['content-type'] || '')) throw fail(415, 'Expected JSON');
+        return json(200, await approveDraft(root, await readJsonBody(req)));
+      }
       if (!['GET', 'HEAD'].includes(req.method)) throw fail(405, 'This companion is read-only. Ask Codex to make changes.');
       if (url.pathname === '/api/health') return json(200, { app: 'local-editing-companion', root: await fs.realpath(root) });
       if (url.pathname === '/api/state') {
         const docs = ['workspace/preferences/editing-guide.md', 'workspace/preferences/editing-rules.md', 'workspace/assets/asset-index.md', 'system/setup/setup-notes.md', 'system/prompts.md'];
         const movedNotes = (await entries(root, dropFolder)).filter(e => e.isFile() && / moved to .+\.txt$/.test(e.name)).map(e => e.name.slice(0, -4)).sort();
-        return json(200, { root, platform: process.platform, projectsFolder: 'workspace/videos', projectsFolderExists: await folderExists(root, 'workspace/videos'), library: await library(root), dropFolder, dropFolderExists: await folderExists(root, dropFolder), newVideos: await mediaFiles(root, dropFolder), movedNotes, finishedFolder, finishedVideos: await mediaFiles(root, finishedFolder), voiceover: await voiceoverStatus(), projects: await projects(root), assets: await assets(root), assetOverview: await assetOverview(root), repo: await repoInfo(root), documents: docs });
+        const groups = await projectGroups(root);
+        return json(200, { root, workspace: await workspaceInfo(root), platform: process.platform, projectsFolder: 'workspace/projects', projectsFolderExists: await folderExists(root, 'workspace/projects'), library: await library(root), dropFolder, dropFolderExists: await folderExists(root, dropFolder), newVideos: await mediaFiles(root, dropFolder), movedNotes, finishedFolder, finishedVideos: await finishedFiles(root), voiceover: await voiceoverStatus(), projects: groups, videos: await videos(root, groups), assets: await assets(root), assetOverview: await assetOverview(root), repo: await repoInfo(root), documents: docs });
       }
       if (url.pathname === '/api/tools') return json(200, { node: process.version, ffmpeg: await probe('ffmpeg', ['-version']), whisper: await probe('whisper-cli', ['--help']), note: 'Detection only. A playable test and Codex review are still required to complete setup.' });
       if (url.pathname === '/api/document') return json(200, await document(root, url.searchParams.get('path')));
@@ -223,7 +301,7 @@ export function createApp({ root = defaultRoot, voiceover = createVoiceover({ ro
       if (staticFiles[url.pathname]) {
         const [file, type] = staticFiles[url.pathname]; res.writeHead(200, { 'Content-Type': type }); res.end(await fs.readFile(path.join(publicRoot, file))); return;
       }
-      const brandFonts = { '/serif.ttf': 'workspace/assets/fonts/instrument-serif/InstrumentSerif-Regular.ttf', '/serif-italic.ttf': 'workspace/assets/fonts/instrument-serif/InstrumentSerif-Italic.ttf' };
+      const brandFonts = { '/brand-mono.ttf': 'workspace/assets/fonts/ibm-plex-mono/IBMPlexMono-Medium.ttf', '/brand-mono-bold.ttf': 'workspace/assets/fonts/ibm-plex-mono/IBMPlexMono-Bold.ttf', '/brand-sans.ttf': 'workspace/assets/fonts/ibm-plex-sans/IBMPlexSans-variable.ttf', '/brand-mincho.ttf': 'workspace/assets/fonts/shippori-mincho/ShipporiMincho-Medium.ttf' };
       if (brandFonts[url.pathname]) { const font = await fs.readFile(await safePath(root, brandFonts[url.pathname])); res.writeHead(200, { 'Content-Type': 'font/ttf' }); res.end(font); return; }
       if (url.pathname === '/inter.ttf') { const font = await fs.readFile(await safePath(root, 'workspace/assets/fonts/inter/Inter-variable.ttf')); res.writeHead(200, { 'Content-Type': 'font/ttf' }); res.end(font); return; }
       throw fail(404, 'Not found');

@@ -26,7 +26,11 @@ The full first-time walkthrough, step by step, lives in [`START HERE.txt`](START
 
 ---
 
-Your video is **moved** (not copied) into its own project the moment your AI app picks it up. Approve a draft and it lands in `workspace/finished-videos/` — nothing else changes automatically.
+Your video is **moved** (not copied) into its own project the moment your AI app picks it up. Before it starts, your AI app writes a short plan, "this is what I have in mind", and opens it in the companion app for you to check. Approve a draft and it lands in `workspace/finished-videos/<project>/` — nothing else changes automatically.
+
+## One brand or client per copy
+
+A QuickCut folder is **one workspace for one brand or client**: its own style, assets and videos, with the name saved during setup. For another brand or client, copy the original folder (or tell your AI app "make a clean copy of this workspace for <name>") and set it up there. Don't mix brands in one folder.
 
 > 📖 Here is a link to a full tutorial on how to make the most out of QuickCut, with my own personal experience and tips on video editing, and with the truths that no one tells you behind these tools: **[read it on Substack](https://miraiengineering.substack.com/p/real-world-ai-no-tutorials-no-made)**
 
@@ -50,18 +54,19 @@ A few examples of what you'd actually type:
 
 > "Give me a voiceover for this script in a deep, warm, cinematic voice."
 
-## The four pages
+## The companion app
 
-![QuickCut's companion app — Videos page, showing finished videos with Show in Finder, Download and Copy path](docs/images/app-snapshot.png)
+![QuickCut's companion app](docs/images/app-snapshot.png)
 
 The companion app is a **read-only window** into your projects — it never edits, renders, or uploads anything itself. Everything happens in conversation with your AI app; the app just shows you where things stand.
 
-- **Videos:** your finished videos ready to play, every project with its approval status, and a map of where everything lives on your Mac.
-- **Workspace:** watch drafts at their real size and shape, see your feedback grouped by draft, get a reminder when the newest draft isn't approved yet, and copy feedback or approval straight into your AI app.
+- **Overview:** the workspace's projects as a tree in the sidebar and a section per project with its videos: status, approved draft, finished versions, size, and Show in Finder. It tells you what is waiting for your review.
+- **Project and video pages:** a project page lists its videos and finished files. A video page has its final versions, a player, every draft newest first with the approved one marked, your feedback grouped by draft, and copy-paste feedback for your AI app. You can approve a draft right there.
+- **Plan page:** when you start a new video, your AI app writes its plan and opens it here (goal, format, what it will do, what it needs from you) before it starts.
 - **Brand:** your colours, fonts, caption and card samples, read straight from your editing guide. To change them, tell your AI app.
 - **Setup & preferences:** what's installed, how to keep QuickCut up to date, your editing style, the asset library by topic, and connecting ElevenLabs — so your API key never passes through the chat.
 
-The app only ever does two things itself: connect ElevenLabs, and **Show in Finder**, which opens a Finder window on a file inside `workspace/` and changes nothing.
+The app only ever does three things itself: connect ElevenLabs, **Show in Finder** (opens a Finder window on a file inside `workspace/`, changes nothing), and **Approve** (a two-click button that records the approval, copies the draft to your finished videos and makes its poster).
 
 ## Enjoying QuickCut?
 

@@ -16,6 +16,8 @@ Reusable icons, Lottie animations, sound effects and motion presets for HyperFra
 - `track.mjs`: measures a round, dark object (a barbell plate seen face-on) frame by frame for `trailIn`. Verify every range on frames before use; stop the range where the object is hidden and never fill gaps with invented points (hand-read keyframes are fine).
 - `example/`: a working composition (icon entrance + Lottie + synced sounds). Rebuild its assets with the `use` line in its `index.html`.
 
+HDR rendering rules (colour compensation, what CSS can and cannot do to footage, prepared ffmpeg clips, freezes, swipes, leaks, clipped glyphs, audio tracks) are in `system/production-lessons.md`.
+
 ## Commands (repo root)
 ```sh
 node system/assets/library.mjs setup          # one-time install / repair; safe to rerun
@@ -36,7 +38,7 @@ node --test system/assets/test/ system/assets/editorial/test/   # tool, toolkit 
 - **Icons** (`icon-<name>`, `icon-<name>@bold|fill|duotone`, or any Phosphor icon as `phosphor:regular/<name>`): pasted inline so CSS `color` sets the colour. Animate the inner `<svg>`, never the timed wrapper's size.
 - **Lottie**: wrapped in a host with `data-composition-id` and `data-no-timeline`. HyperFrames starts the animation at the host's `data-start`, and seeking to any time shows the right frame. Set `loop: false` for one-shots.
 - **Editorial patterns** (`editorial-*` from `search --category motion`): copies `editorial.js` and prints a timed clip with a child to animate plus the `HFEditorial` calls. Animate the child, never the clip. Real media only.
-- **Annotations** (`annotate-*`): copies `annotate.js` and prints the overlay markup plus the `HFAnnotate` calls. Positions are the video's display pixels; times are composition seconds (convert from source time with the clip's `data-start` and `data-media-start`).
+- **Annotations** (`annotate-*`): copies `annotate.js` and prints the overlay markup plus the `HFAnnotate` calls. Positions are the video's display pixels; times are composition seconds (convert from source time with the clip's `data-start` and `data-media-start`). Example: `workspace/projects/<project>/<video>/work/build-composition-05.mjs`.
 - **Sounds**: an `<audio>` at the entry's volume (toolkit cues −15 to −18 dB, others 0.35), started early by the file's measured lead-in so the hit lands exactly on the visual beat (`show` prints `onset_seconds`).
 - **Formats**: Lottie JSON, SVG, PNG, MP3, WAV. GIF, video stickers, Figma/AE files are not imported: they cannot be seeked frame-accurately or rendered.
 

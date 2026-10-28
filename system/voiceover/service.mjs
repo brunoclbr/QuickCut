@@ -92,12 +92,20 @@ export function createVoiceover({ root, store = keychainStore(), sdk, now = () =
     try { await fs.access(path.join(here, 'node_modules/@elevenlabs/elevenlabs-js/package.json')); return true; } catch { return false; }
   }
 
+  // The video's folder: workspace/projects/<project>/<video>. A bare video name works when only one project has it; otherwise give "project/video".
   async function project(name) {
-    if (typeof name !== 'string' || !projectName.test(name)) fail('usage', 'Give the project folder name inside workspace/videos, for example "my-video".');
-    const videos = await fs.realpath(at('workspace/videos')).catch(() => fail('path', 'workspace/videos does not exist.'));
-    const dir = await fs.realpath(path.join(videos, name)).catch(() => fail('path', `There is no project called "${name}" in workspace/videos.`));
-    if (path.dirname(dir) !== videos) fail('path', 'The project must be a folder directly inside workspace/videos.');
-    return dir;
+    const part = '[a-zA-Z0-9][a-zA-Z0-9 _.-]*';
+    if (typeof name !== 'string' || !new RegExp(`^${part}(/${part})?$`).test(name)) fail('usage', 'Give the video folder name inside workspace/projects/<project>, for example "my-video" (or "my-project/my-video").');
+    const base = await fs.realpath(at('workspace/projects')).catch(() => fail('path', 'workspace/projects does not exist.'));
+    const [first, second] = name.split('/');
+    let candidates;
+    if (second) candidates = [path.join(base, first, second)];
+    else candidates = (await fs.readdir(base, { withFileTypes: true })).filter(e => e.isDirectory()).map(e => path.join(base, e.name, first));
+    const found = [];
+    for (const candidate of candidates) { try { const real = await fs.realpath(candidate); if ((await fs.stat(real)).isDirectory() && path.dirname(path.dirname(real)) === base) found.push(real); } catch { /* not in this project */ } }
+    if (!found.length) fail('path', `There is no video called "${name}" in workspace/projects.`);
+    if (found.length > 1) fail('usage', `Several projects have a video called "${name}". Give "project/video".`);
+    return found[0];
   }
   // A folder inside the project, created if needed; symlinks may not lead outside it.
   async function projectFolder(dir, rel) {

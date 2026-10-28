@@ -17,9 +17,13 @@ Full list with versions: README.md, section "What gets downloaded".
    move it, open it again in Codex and type: "I renamed this folder from OLD NAME to
    NEW NAME, update everything."
 2. In Codex, open this whole folder as a project.
+   One brand or client = one copy of this folder. Using QuickCut for a second brand or
+   client? Don't reuse this one: copy the original folder (or ask your AI app: "Make a clean
+   copy of this workspace for <name>") and start again there.
 3. Type: "Set up this video editing folder for me."
    It checks your Mac, installs the free tools it needs and makes a short test video.
-   Say yes when it asks to install something.
+   Say yes when it asks to install something. It also asks what to call this
+   workspace (your brand or client).
 4. Type: "Set up the asset library."
    It installs free icons, animations and sound effects, then asks you to download
    a few free extras in your browser:

@@ -18,10 +18,13 @@ async function healthy(url) {
     return result.app === 'local-editing-companion' && result.root === root;
   } catch { return false; }
 }
+// Optional page to open: `node system/app/launch.mjs plan/<project>/<video>` opens http://127.0.0.1:<port>/#plan/<project>/<video>.
+const pageArg = process.argv.slice(2).find(a => !a.startsWith('--'));
+const hash = pageArg ? `#${pageArg.replace(/^#/, '')}` : '';
 function openBrowser(url) {
   if (process.argv.includes('--no-open')) return;
-  if (process.platform !== 'darwin') { console.log(`Open this URL in your browser: ${url}`); return; }
-  const child = spawn('/usr/bin/open', [url], { stdio: 'ignore' });
+  if (process.platform !== 'darwin') { console.log(`Open this URL in your browser: ${url}${hash}`); return; }
+  const child = spawn('/usr/bin/open', [url + hash], { stdio: 'ignore' });
   child.on('error', error => console.error(`Could not open browser: ${error.message}. Open ${url} manually.`));
 }
 let previous;

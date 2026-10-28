@@ -1,6 +1,6 @@
 // Build-time helpers for HyperFrames edits of real footage: shot timing, movement-matched cuts, HDR freeze frames,
 // continuous ambience, re-spaced narration and sound cues synced through the asset library.
-// Import from a composition build script (see workspace/videos/<name>/work/build-composition-*.mjs):
+// Import from a composition build script (see workspace/projects/<project>/<video>/work/build-composition-*.mjs):
 //   import { Edit, freezeClip, matchSheet, cue, narration } from '<repo>/system/assets/compose.mjs';
 // Browser-side motion lives in system/assets/hf/edit.js (HFEdit) and hf/annotate.js (HFAnnotate).
 import { execFileSync } from 'node:child_process';

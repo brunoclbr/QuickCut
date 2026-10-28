@@ -26,7 +26,7 @@ Eleven v4 (`eleven_v4`) through Text to Dialogue with timestamps (`textToDialogu
 Connecting validates the key with `GET /v1/user` (account, plan, credits) and a one-voice search (voice listing). A key without those permissions still connects; the companion shows what it can't do. Permission to generate speech can only be proven by generating, which costs credits, so the companion shows "Speech: Not yet confirmed" until the first take.
 
 ## Takes and caching
-`workspace/videos/<name>/voiceover/take-NNN/`:
+`workspace/projects/<project>/<video>/voiceover/take-NNN/`:
 - `audio.mp3`;
 - `script.txt` (with tags) and `spoken.txt` (without);
 - `alignment.json` (raw API timings) and `words.json` (`{ duration, words: [{ text, start, end }] }`);

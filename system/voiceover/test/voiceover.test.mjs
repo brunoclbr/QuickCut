@@ -47,7 +47,7 @@ function memoryStore(initial = null) {
 }
 async function workspace() {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'voiceover-test-'));
-  await fs.mkdir(path.join(root, 'workspace/videos/demo/composition'), { recursive: true });
+  await fs.mkdir(path.join(root, 'workspace/projects/main/demo/composition'), { recursive: true });
   await fs.mkdir(path.join(root, 'workspace/preferences'), { recursive: true });
   return root;
 }
@@ -139,7 +139,7 @@ test('generation needs approval, then writes a complete take with the requested 
   assert.deepEqual(request.inputs, [{ text: SCRIPT, voiceId: VOICE }]);
   assert.equal(request.modelId, 'eleven_v4'); assert.deepEqual(request.settings, { stability: 0.4 });
   assert.equal(take.take, 'take-001'); assert.equal(take.reused, false); assert.equal(take.duration, 3.2);
-  const dir = path.join(root, 'workspace/videos/demo/voiceover/take-001');
+  const dir = path.join(root, 'workspace/projects/main/demo/voiceover/take-001');
   assert.deepEqual((await fs.readdir(dir)).sort(), ['alignment.json', 'audio.mp3', 'script.txt', 'spoken.txt', 'take.json', 'words.json']);
   assert.equal((await fs.readFile(path.join(dir, 'script.txt'), 'utf8')).trim(), SCRIPT);
   const words = JSON.parse(await fs.readFile(path.join(dir, 'words.json'), 'utf8'));
@@ -152,14 +152,14 @@ test('generation needs approval, then writes a complete take with the requested 
 test('identical requests reuse the take; a new take never overwrites the old one', async () => {
   const { root, calls, vo } = await setup();
   await vo.generate({ project: 'demo', script: SCRIPT, voiceId: VOICE, approved: true });
-  const before = await fs.readFile(path.join(root, 'workspace/videos/demo/voiceover/take-001/audio.mp3'));
+  const before = await fs.readFile(path.join(root, 'workspace/projects/main/demo/voiceover/take-001/audio.mp3'));
   const again = await vo.generate({ project: 'demo', script: SCRIPT, voiceId: VOICE });
   assert.equal(again.reused, true); assert.equal(again.take, 'take-001');
   assert.equal(calls.filter(c => c.generate).length, 1, 'reuse costs nothing');
   await assert.rejects(vo.generate({ project: 'demo', script: SCRIPT, voiceId: VOICE, newTake: true }), e => e.code === 'not_approved');
   const second = await vo.generate({ project: 'demo', script: SCRIPT, voiceId: VOICE, newTake: true, approved: true });
   assert.equal(second.take, 'take-002');
-  assert.deepEqual(await fs.readFile(path.join(root, 'workspace/videos/demo/voiceover/take-001/audio.mp3')), before);
+  assert.deepEqual(await fs.readFile(path.join(root, 'workspace/projects/main/demo/voiceover/take-001/audio.mp3')), before);
   assert.equal((await vo.takes('demo')).length, 2);
 });
 
@@ -167,7 +167,7 @@ test('missing alignment keeps the paid audio but invents no caption timing', asy
   const { root, vo } = await setup({ generate: () => ({ audioBase64: mp3.toString('base64'), voiceSegments: [] }) });
   const take = await vo.generate({ project: 'demo', script: SCRIPT, voiceId: VOICE, approved: true });
   assert.equal(take.files.words, null); assert.equal(take.alignmentSource, null); assert.match(take.warnings[0], /no usable timing/);
-  await assert.rejects(fs.access(path.join(root, 'workspace/videos/demo/voiceover/take-001/words.json')));
+  await assert.rejects(fs.access(path.join(root, 'workspace/projects/main/demo/voiceover/take-001/words.json')));
   await assert.rejects(vo.use({ project: 'demo', take: 'take-001' }), /no caption timings/);
 });
 
@@ -176,7 +176,7 @@ test('ElevenLabs failures become clear errors and leave no partial take', async 
   for (const [error, code] of cases) {
     const { root, vo } = await setup({ generate: () => { throw error; } });
     await assert.rejects(vo.generate({ project: 'demo', script: SCRIPT, voiceId: VOICE, approved: true }), e => e.code === code);
-    assert.deepEqual(await fs.readdir(path.join(root, 'workspace/videos/demo')).then(d => d.filter(n => n === 'voiceover')), []);
+    assert.deepEqual(await fs.readdir(path.join(root, 'workspace/projects/main/demo')).then(d => d.filter(n => n === 'voiceover')), []);
   }
   const bad = await setup({ generate: () => ({ audioBase64: Buffer.from('nope').toString('base64') }) });
   await assert.rejects(bad.vo.generate({ project: 'demo', script: SCRIPT, voiceId: VOICE, approved: true }), e => e.code === 'bad_response');
@@ -199,7 +199,7 @@ test('use copies the take into the composition and prints the HTML to paste', as
   const { root, vo } = await setup();
   await vo.generate({ project: 'demo', script: SCRIPT, voiceId: VOICE, approved: true });
   const r = await vo.use({ project: 'demo', take: 'take-001' });
-  const folder = path.join(root, 'workspace/videos/demo/composition/assets/voiceover');
+  const folder = path.join(root, 'workspace/projects/main/demo/composition/assets/voiceover');
   assert.deepEqual((await fs.readdir(folder)).sort(), ['captions.js', 'take-001.mp3', 'take-001.words.js']);
   assert.match(r.html, /HFCaptions\.mount/); assert.match(r.html, /data-duration="3.200"/);
   const sandbox = { window: {} }; vm.runInNewContext(await fs.readFile(path.join(folder, 'take-001.words.js'), 'utf8'), sandbox);
